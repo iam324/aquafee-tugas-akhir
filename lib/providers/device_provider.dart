@@ -35,33 +35,67 @@ class DeviceNotifier extends Notifier<DeviceState> {
 
   @override
   DeviceState build() {
-    // Inisialisasi _db di sini untuk memastikan Firebase sudah siap
-    _db = FirebaseDatabase.instanceFor(
-      app: Firebase.app(),
-      databaseURL: 'https://aquafeed-f3451-default-rtdb.firebaseio.com/',
-    ).ref('aquafeed');
+    try {
+      // Inisialisasi _db di sini untuk memastikan Firebase sudah siap
+      _db = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL: 'https://aquafeed-f3451-default-rtdb.firebaseio.com/',
+      ).ref('aquafeed');
 
-    // Mendengarkan status alat dari Firebase secara real-time
-    _db.child('device_status').onValue.listen((event) {
-      final value = event.snapshot.value;
-      if (value != null) {
-        state = state.copyWith(status: value.toString());
-      }
-    });
+      // Mendengarkan status alat dari Firebase secara real-time
+      _db.child('device_status').onValue.listen(
+        (event) {
+          try {
+            final value = event.snapshot.value;
+            if (value != null) {
+              state = state.copyWith(status: value.toString());
+            }
+          } catch (e) {
+            print('Error parsing device_status: $e');
+          }
+        },
+        onError: (error) {
+          print('Error listening to device_status: $error');
+          state = state.copyWith(isFirebaseConnected: false);
+        },
+      );
 
-    _db.child('valve_status').onValue.listen((event) {
-      final value = event.snapshot.value;
-      if (value != null) {
-        state = state.copyWith(valveStatus: value.toString());
-      }
-    });
+      _db.child('valve_status').onValue.listen(
+        (event) {
+          try {
+            final value = event.snapshot.value;
+            if (value != null) {
+              state = state.copyWith(valveStatus: value.toString());
+            }
+          } catch (e) {
+            print('Error parsing valve_status: $e');
+          }
+        },
+        onError: (error) {
+          print('Error listening to valve_status: $error');
+          state = state.copyWith(isFirebaseConnected: false);
+        },
+      );
 
-    _db.child('servo_status').onValue.listen((event) {
-      final value = event.snapshot.value;
-      if (value != null) {
-        state = state.copyWith(servoStatus: value.toString());
-      }
-    });
+      _db.child('servo_status').onValue.listen(
+        (event) {
+          try {
+            final value = event.snapshot.value;
+            if (value != null) {
+              state = state.copyWith(servoStatus: value.toString());
+            }
+          } catch (e) {
+            print('Error parsing servo_status: $e');
+          }
+        },
+        onError: (error) {
+          print('Error listening to servo_status: $error');
+          state = state.copyWith(isFirebaseConnected: false);
+        },
+      );
+    } catch (e) {
+      print('Error initializing device provider: $e');
+    }
 
     return DeviceState(
       isFirebaseConnected: true,
@@ -72,7 +106,11 @@ class DeviceNotifier extends Notifier<DeviceState> {
   }
 
   void toggleConnection() {
-    state = state.copyWith(isFirebaseConnected: !state.isFirebaseConnected);
+    try {
+      state = state.copyWith(isFirebaseConnected: !state.isFirebaseConnected);
+    } catch (e) {
+      print('Error toggling connection: $e');
+    }
   }
 }
 

@@ -23,9 +23,9 @@ class FeedingControlPanel extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'INPUT DOSIS PAKAN',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.secondaryText, letterSpacing: 1.2),
+            style: AppTheme.titleSmall.copyWith(color: AppTheme.secondaryText),
           ),
           const SizedBox(height: 16),
           Row(
@@ -37,18 +37,19 @@ class FeedingControlPanel extends ConsumerWidget {
                     color: AppTheme.cardBg,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '${feedState.dosage}',
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.accent),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text('g', style: TextStyle(fontSize: 18, color: AppTheme.accent)),
-                      ],
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                    Text(
+                      '${feedState.dosage.toInt()}',
+                      style: AppTheme.displayLarge.copyWith(color: AppTheme.accent),
                     ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'g',
+                      style: AppTheme.titleMedium.copyWith(color: AppTheme.accent),
+                    ),
+                    ],
                   ),
                 ),
               ),
@@ -63,35 +64,63 @@ class FeedingControlPanel extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
-          SizedBox(
+           SizedBox(
             width: double.infinity,
             height: 54,
             child: ElevatedButton(
-              onPressed: () {
-                final dosage = feedState.dosage;
-                feedNotifier.dispenseFeed();
-                
-                // Menambah log ke Activity Log
-                final now = DateTime.now();
-                final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-                
-                ref.read(logProvider.notifier).addLog(
-                  ActivityLog(
-                    title: 'Pakan ${dosage}g diberikan',
-                    time: 'Hari ini $timeStr',
-                    type: LogType.success,
-                    status: 'Selesai',
-                    dosage: dosage,
-                    timestamp: now,
-                  ),
-                );
+              onPressed: () async {
+                try {
+                  final dosage = feedState.dosage;
+                  
+                  if (dosage <= 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Dosis harus lebih dari 0g'),
+                        backgroundColor: Colors.orange,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    return;
+                  }
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Memberikan ${dosage}g pakan...'),
-                    backgroundColor: AppTheme.accent,
-                  ),
-                );
+                  feedNotifier.dispenseFeed();
+                  
+                  // Menambah log ke Activity Log
+                  final now = DateTime.now();
+                  final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+                  
+                  await ref.read(logProvider.notifier).addLog(
+                    ActivityLog(
+                      title: 'Pakan ${dosage}g diberikan',
+                      time: 'Hari ini $timeStr',
+                      type: LogType.success,
+                      status: 'Selesai',
+                      dosage: dosage,
+                      timestamp: now,
+                    ),
+                  );
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Memberikan ${dosage}g pakan...'),
+                        backgroundColor: AppTheme.accent,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  print('Error dispensing feed: $e');
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: Gagal memberi pakan - ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.cardBg,

@@ -27,24 +27,24 @@ class StatusCardsSection extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.balance, size: 16, color: AppTheme.secondaryText),
-                      SizedBox(width: 8),
-                      Text('Stok Pakan', style: TextStyle(fontSize: 12, color: AppTheme.secondaryText)),
-                    ],
-                  ),
+                   const Row(
+                     children: [
+                       Icon(Icons.balance, size: 16, color: AppTheme.secondaryText),
+                       SizedBox(width: 8),
+                       Text('Stok Pakan', style: TextStyle(fontSize: 12, color: AppTheme.secondaryText, fontWeight: FontWeight.w500)),
+                     ],
+                   ),
                   const SizedBox(height: 12),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Text(
-                        '${feedState.currentStock.toInt()}',
-                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      const SizedBox(width: 4),
-                      const Text('g', style: TextStyle(fontSize: 14, color: AppTheme.secondaryText)),
+                       Text(
+                         '${feedState.currentStock.toInt()}',
+                         style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+                       ),
+                       const SizedBox(width: 4),
+                       const Text('g', style: TextStyle(fontSize: 16, color: AppTheme.secondaryText, fontWeight: FontWeight.w500)),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -58,10 +58,10 @@ class StatusCardsSection extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    'Kapasitas: ${feedState.maxCapacity.toInt()}g',
-                    style: const TextStyle(fontSize: 10, color: AppTheme.success),
-                  ),
+                   Text(
+                     'Kapasitas: ${feedState.maxCapacity.toInt()}g',
+                     style: AppTheme.captionSmall.copyWith(color: AppTheme.success),
+                   ),
                 ],
               ),
             ),
@@ -78,13 +78,13 @@ class StatusCardsSection extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.monitor_heart_outlined, size: 16, color: AppTheme.secondaryText),
-                      SizedBox(width: 8),
-                      Text('Status Alat', style: TextStyle(fontSize: 12, color: AppTheme.secondaryText)),
-                    ],
-                  ),
+                   const Row(
+                     children: [
+                       Icon(Icons.monitor_heart_outlined, size: 16, color: AppTheme.secondaryText),
+                       SizedBox(width: 8),
+                       Text('Status Alat', style: TextStyle(fontSize: 12, color: AppTheme.secondaryText, fontWeight: FontWeight.w500)),
+                     ],
+                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -94,21 +94,21 @@ class StatusCardsSection extends ConsumerWidget {
                         decoration: const BoxDecoration(color: AppTheme.success, shape: BoxShape.circle),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        deviceState.status,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.success),
-                      ),
+                       Text(
+                         deviceState.status,
+                         style: AppTheme.titleLarge.copyWith(color: AppTheme.success, fontWeight: FontWeight.w700),
+                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    'Katup: ${deviceState.valveStatus}',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.success),
-                  ),
-                  Text(
-                    'Servo: ${deviceState.servoStatus}',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.success),
-                  ),
+                   Text(
+                     'Katup: ${deviceState.valveStatus}',
+                     style: AppTheme.labelMedium.copyWith(color: AppTheme.success),
+                   ),
+                   Text(
+                     'Servo: ${deviceState.servoStatus}',
+                     style: AppTheme.labelMedium.copyWith(color: AppTheme.success),
+                   ),
                 ],
               ),
             ),

@@ -66,7 +66,10 @@ class _LiveCameraCardState extends State<LiveCameraCard> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Image.memory(pngBytes),
-              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('Close', style: AppTheme.labelMedium),
+              ),
             ],
           ),
         ),
@@ -105,17 +108,17 @@ class _LiveCameraCardState extends State<LiveCameraCard> {
                         const SizedBox(height: 8),
                         Text(
                           'Kamera Terputus',
-                          style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                          style: AppTheme.titleSmall.copyWith(color: Colors.white70),
                         ),
                         Text(
                           'Pastikan ESP32 Menyala',
-                          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+                          style: AppTheme.captionSmall.copyWith(color: Colors.white54),
                         ),
                         if (error != null) ...[
                           const SizedBox(height: 8),
                           Text(
                             error.toString(),
-                            style: TextStyle(color: Colors.white70, fontSize: 12),
+                            style: AppTheme.captionSmall.copyWith(color: Colors.white54),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -135,12 +138,12 @@ class _LiveCameraCardState extends State<LiveCameraCard> {
                                   });
                                 });
                               },
-                              child: const Text('Retry'),
+                              child: Text('Retry', style: AppTheme.labelMedium),
                             ),
                             const SizedBox(width: 8),
                             TextButton(
                               onPressed: () => _showChangeUrlDialog(),
-                              child: const Text('Change URL'),
+                              child: Text('Change URL', style: AppTheme.labelMedium),
                             ),
                           ],
                         ),
@@ -192,10 +195,19 @@ class _LiveCameraCardState extends State<LiveCameraCard> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Stream URL'),
-        content: TextField(controller: controller),
+        title: Text('Stream URL', style: AppTheme.titleMedium),
+        content: TextField(
+          controller: controller,
+          style: AppTheme.bodyMedium,
+          decoration: InputDecoration(
+            hintStyle: AppTheme.bodySmall,
+          ),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel', style: AppTheme.labelMedium),
+          ),
           TextButton(
             onPressed: () async {
               final newUrl = controller.text.trim();
@@ -217,7 +229,7 @@ class _LiveCameraCardState extends State<LiveCameraCard> {
                 });
               });
             },
-            child: const Text('Save'),
+            child: Text('Save', style: AppTheme.labelMedium.copyWith(color: AppTheme.accent)),
           ),
         ],
       ),

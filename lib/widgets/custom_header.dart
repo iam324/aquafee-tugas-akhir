@@ -18,13 +18,9 @@ class CustomHeader extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'AquaFeed',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryText,
-                ),
+                style: AppTheme.displayMedium,
               ),
               const SizedBox(height: 4),
               Row(
@@ -40,10 +36,7 @@ class CustomHeader extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Text(
                     deviceState.isFirebaseConnected ? 'Firebase terhubung' : 'Firebase terputus',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.success,
-                    ),
+                    style: AppTheme.captionSmall.copyWith(color: AppTheme.success),
                   ),
                 ],
               ),

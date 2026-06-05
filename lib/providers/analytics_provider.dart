@@ -35,12 +35,13 @@ class AnalyticsState {
 class AnalyticsNotifier extends Notifier<AnalyticsState> {
   @override
   AnalyticsState build() {
-    final logs = ref.watch(logProvider);
+    final logState = ref.watch(logProvider);
     final feedState = ref.watch(feedProvider);
-    return _processData(logs, feedState);
+    return _processData(logState, feedState);
   }
 
-  AnalyticsState _processData(List<ActivityLog> logs, FeedState feedState) {
+  AnalyticsState _processData(LogState logState, FeedState feedState) {
+    final logs = logState.logs;
     final today = DateTime.now();
     final List<DailyFeedData> weeklyData = [];
 

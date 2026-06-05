@@ -11,7 +11,7 @@ class AnalyticsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final analytics = ref.watch(analyticsProvider);
-    final logs = ref.watch(logProvider);
+    final logState = ref.watch(logProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -60,10 +60,38 @@ class AnalyticsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             _buildSectionTitle('Riwayat Aktivitas Terbaru'),
             const SizedBox(height: 12),
-            _buildRecentLogs(logs),
+            if (logState.error != null)
+              _buildErrorMessage(logState.error!)
+            else
+              _buildRecentLogs(logState.logs),
             const SizedBox(height: 20),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorMessage(String error) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.warning.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: AppTheme.warning, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              error,
+              style: const TextStyle(fontSize: 12, color: Colors.white),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -129,7 +157,7 @@ class AnalyticsScreen extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(fontSize: 10, color: AppTheme.secondaryText),
+            style: AppTheme.captionSmall,
           ),
         ],
       ),
@@ -139,12 +167,7 @@ class AnalyticsScreen extends ConsumerWidget {
   Widget _buildSectionTitle(String title) {
     return Text(
       title.toUpperCase(),
-      style: const TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-        color: AppTheme.secondaryText,
-        letterSpacing: 1.2,
-      ),
+      style: AppTheme.titleSmall.copyWith(color: AppTheme.secondaryText),
     );
   }
 
@@ -316,7 +339,7 @@ class AnalyticsScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppTheme.accent.withOpacity(0.1),
+                  color: AppTheme.accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.set_meal, color: AppTheme.accent, size: 18),
@@ -348,7 +371,7 @@ class AnalyticsScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppTheme.success.withOpacity(0.1),
+                  color: AppTheme.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
