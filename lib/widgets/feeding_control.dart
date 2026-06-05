@@ -81,6 +81,8 @@ class FeedingControlPanel extends ConsumerWidget {
                     time: 'Hari ini $timeStr',
                     type: LogType.success,
                     status: 'Selesai',
+                    dosage: dosage,
+                    timestamp: now,
                   ),
                 );
 

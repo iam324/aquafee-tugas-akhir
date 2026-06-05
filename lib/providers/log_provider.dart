@@ -9,19 +9,25 @@ class ActivityLog {
   final String time;
   final LogType type;
   final String status;
+  final int dosage;
+  final DateTime timestamp;
 
   ActivityLog({
     required this.title,
     required this.time,
     required this.type,
     required this.status,
-  });
+    this.dosage = 0,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
     'title': title,
     'time': time,
     'type': type.index,
     'status': status,
+    'dosage': dosage,
+    'timestamp': timestamp.millisecondsSinceEpoch,
   };
 
   factory ActivityLog.fromJson(Map<dynamic, dynamic> json) => ActivityLog(
@@ -29,6 +35,10 @@ class ActivityLog {
     time: json['time'],
     type: LogType.values[json['type']],
     status: json['status'],
+    dosage: json['dosage'] ?? 0,
+    timestamp: json['timestamp'] != null
+        ? DateTime.fromMillisecondsSinceEpoch(json['timestamp'])
+        : DateTime.now(),
   );
 }
 
@@ -37,18 +47,15 @@ class LogNotifier extends Notifier<List<ActivityLog>> {
 
   @override
   List<ActivityLog> build() {
-    // Inisialisasi _db di sini untuk memastikan Firebase sudah siap
     _db = FirebaseDatabase.instanceFor(
       app: Firebase.app(),
       databaseURL: 'https://aquafeed-f3451-default-rtdb.firebaseio.com/',
     ).ref('aquafeed/logs');
 
-    // Mendengarkan riwayat log dari Firebase
     _db.onValue.listen((event) {
       final data = event.snapshot.value as Map?;
       if (data != null) {
         final logs = data.values.map((e) => ActivityLog.fromJson(e as Map)).toList();
-        // Urutkan berdasarkan waktu (asumsi log terbaru di atas)
         state = logs.reversed.toList();
       }
     });
@@ -64,3 +71,4 @@ class LogNotifier extends Notifier<List<ActivityLog>> {
 final logProvider = NotifierProvider<LogNotifier, List<ActivityLog>>(() {
   return LogNotifier();
 });
+
