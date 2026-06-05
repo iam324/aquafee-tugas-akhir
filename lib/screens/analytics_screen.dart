@@ -27,6 +27,25 @@ class AnalyticsScreen extends ConsumerWidget {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            tooltip: 'Reset Log & Demo Data',
+            onPressed: () async {
+              final logs = ref.read(logProvider.notifier);
+              await logs.clearAllLogs();
+              await logs.seedDemoData();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Log direset dengan data demo 7 hari'),
+                    backgroundColor: AppTheme.accent,
+                  ),
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -148,7 +167,7 @@ class AnalyticsScreen extends ConsumerWidget {
     }
 
     final maxY = data.map((d) => d.totalGram).reduce((a, b) => a > b ? a : b);
-    final ceilingY = maxY < 10 ? 10.0 : (maxY * 1.2);
+    final ceilingY = maxY < 100 ? 100.0 : (maxY * 1.2);
 
 
     return Container(

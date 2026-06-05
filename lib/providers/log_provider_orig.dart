@@ -66,35 +66,6 @@ class LogNotifier extends Notifier<List<ActivityLog>> {
   Future<void> addLog(ActivityLog log) async {
     await _db.push().set(log.toJson());
   }
-
-  Future<void> clearAllLogs() async {
-    await _db.remove();
-  }
-
-  Future<void> seedDemoData() async {
-    final today = DateTime.now();
-    final demoDosages = [25, 30, 20, 35, 0, 15, 10];
-
-    for (int i = 6; i >= 0; i--) {
-      final date = today.subtract(Duration(days: i));
-      final hour = 8 + (i % 3) * 3;
-      final logDate = DateTime(date.year, date.month, date.day, hour, 0, 0);
-      final timeStr = '${hour.toString().padLeft(2, '0')}:00';
-      final dayStr = '${date.day}/${date.month}/${date.year}';
-
-      final dosage = demoDosages[i];
-      if (dosage > 0) {
-        await _db.push().set({
-          'title': 'Pakan ${dosage}g diberikan',
-          'time': '$dayStr $timeStr',
-          'type': 0,
-          'status': 'Selesai',
-          'dosage': dosage,
-          'timestamp': logDate.millisecondsSinceEpoch,
-        });
-      }
-    }
-  }
 }
 
 final logProvider = NotifierProvider<LogNotifier, List<ActivityLog>>(() {

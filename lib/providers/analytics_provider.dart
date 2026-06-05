@@ -81,9 +81,6 @@ class AnalyticsNotifier extends Notifier<AnalyticsState> {
 
   String _getDayLabel(DateTime date, DateTime today) {
     final dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-    if (date.year == today.year && date.month == today.month && date.day == today.day) {
-      return 'Hari Ini';
-    }
     return dayNames[date.weekday - 1];
   }
 
