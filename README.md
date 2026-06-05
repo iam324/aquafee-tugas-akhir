@@ -93,6 +93,7 @@ flutter run
 
 ## 📚 Dokumentasi Lainnya
 
+- **[IDE_PENGEMBANGAN.md](./IDE_PENGEMBANGAN.md)** — Kumpulan ide pengembangan fitur untuk project (Dashboard Grafik, Penjadwalan, Notifikasi, dll).
 - **[PENJELASAN_PROYEK.md](./PENJELASAN_PROYEK.md)** — Penjelasan detail arsitektur, fitur, dan analisis pemecahan masalah.
 - **[TAHAP_SELANJUTNYA.md](./TAHAP_SELANJUTNYA.md)** — Panduan integrasi hardware ESP32, Firebase, dan skema elektronika.
 
