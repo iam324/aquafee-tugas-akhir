@@ -1,0 +1,25 @@
+{
+	"folders": [
+		{
+			"path": "../.dart_tool"
+		},
+		{
+			"path": "../.idea"
+		},
+		{
+			"path": "../android"
+		},
+		{
+			"path": "../build"
+		},
+		{
+			"path": "../esp32_firmware"
+		},
+		{
+			"path": "../ios"
+		},
+		{
+			"path": "."
+		}
+	]
+}
