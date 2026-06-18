@@ -124,6 +124,18 @@ class FeedNotifier extends Notifier<FeedState> {
   }
 
   String? getLastError() => _lastError;
+
+  Future<void> resetStock() async {
+    try {
+      final maxCap = state.maxCapacity;
+      await _db.update({'current_stock': maxCap});
+      _lastError = null;
+    } catch (e) {
+      print('Error resetting stock: $e');
+      _lastError = 'Gagal reset stok: ${e.toString()}';
+      rethrow;
+    }
+  }
 }
 
 final feedProvider = NotifierProvider<FeedNotifier, FeedState>(() {

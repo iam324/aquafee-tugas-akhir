@@ -80,7 +80,7 @@ class AnalyticsSummaryCard extends ConsumerWidget {
                       style: AppTheme.labelMedium.copyWith(fontWeight: FontWeight.w600),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.accent.withOpacity(0.2),
+                      backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
                       foregroundColor: AppTheme.accent,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -107,19 +107,19 @@ class AnalyticsSummaryCard extends ConsumerWidget {
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
+decoration: BoxDecoration(
+         color: color.withValues(alpha: 0.05),
+         borderRadius: BorderRadius.circular(12),
+         border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+       ),
+       child: Row(
+         children: [
+           Container(
+             padding: const EdgeInsets.all(8),
+             decoration: BoxDecoration(
+               color: color.withValues(alpha: 0.15),
+               borderRadius: BorderRadius.circular(8),
+             ),
             child: Icon(icon, color: color, size: 18),
           ),
           const SizedBox(width: 10),

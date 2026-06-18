@@ -1,68 +1,74 @@
 # Penjelasan Proyek AquaFeed untuk Tugas Akhir
 
-Dokumen ini berisi penjelasan mendalam mengenai arsitektur, fitur, dan struktur kode proyek **AquaFeed**. Gunakan dokumen ini sebagai referensi saat mempresentasikan proyek kepada dosen pembimbing.
+Dokumen ini berisi penjelasan mendalam mengenai arsitektur, fitur, dan struktur kode proyek **AquaFeed**. Gunakan dokumen ini sebagai referensi utama untuk memahami ekosistem sistem IoT ini secara keseluruhan.
 
 ---
 
 ## 1. Konsep Utama Proyek (Architectural Overview)
 
-Proyek ini dibangun menggunakan arsitektur **Clean UI & State Management Modern**.
+Proyek ini adalah sistem **Smart Fish Feeder** berbasis IoT yang menghubungkan perangkat keras (Hardware) dengan aplikasi mobile secara *real-time*.
 
-*   **Framework**: Flutter (Dart). Dipilih karena kemampuannya membuat aplikasi lintas platform (Android/iOS) dengan satu basis kode (single codebase).
-*   **State Management**: **Riverpod (versi 2.6.x)**. 
-    *   *Mengapa Riverpod?* Riverpod adalah state management modern di Flutter yang lebih aman secara tipe (*type-safe*), mencegah error umum (seperti `ProviderNotFoundException`), dan performanya sangat efisien karena hanya merender ulang (*rebuild*) komponen UI yang datanya berubah.
-*   **Theme & UI**: Menggunakan antarmuka mode gelap (**Dark Mode UI**) dengan skema warna *Midnight Blue* dan *Cyan*. Desain ini dipilih untuk memberikan kesan teknologi tinggi (High-Tech) yang sesuai dengan alat IoT.
+*   **Framework Aplikasi**: Flutter (Dart) dengan arsitektur **Clean UI**.
+*   **State Management**: **Riverpod (versi 2.6.x)**. Memastikan aliran data yang *type-safe* dan reaktif di seluruh aplikasi.
+*   **Backend & Jembatan Komunikasi**: **Firebase Realtime Database (RTDB)**. Digunakan untuk sinkronisasi perintah (*command*) dan status antara aplikasi dan alat.
+*   **Hardware Core**: **ESP32-CAM**. Menangani pengambilan gambar (video streaming) dan kontrol aktuator (Servo).
+*   **Theme & UI**: Desain **Dark Mode** modern dengan skema warna *Midnight Blue* dan *Cyan* untuk kesan teknologi tinggi.
 
 ---
 
-## 2. Fitur Utama & Penjelasan Teknis Kode
+## 2. Fitur Utama & Penjelasan Teknis
 
 ### A. Real-time Monitoring (Live Camera & Status)
-*   **Fungsi**: Menampilkan visualisasi area kolam (simulasi) dan memantau status perangkat keras (hardware) secara langsung.
-*   **Implementasi Kode**:
-    *   Berada di `lib/widgets/live_camera_card.dart` dan `lib/widgets/status_cards.dart`.
-    *   **Kereaktifan**: Widget `StatusCardsSection` menggunakan `ref.watch(deviceProvider)`. Ini berarti UI "mendengarkan" perubahan pada `deviceProvider`. Jika status katup atau servo diubah (misalnya dari server/IoT), UI akan otomatis diperbarui tanpa perlu memuat ulang seluruh halaman.
+*   **Fungsi**: Menampilkan visualisasi kolam secara langsung dan memantau status komponen hardware.
+*   **Teknis**: 
+    *   **Video**: Menggunakan `flutter_mjpeg` untuk menangkap stream dari ESP32-CAM.
+    *   **Status**: UI "mendengarkan" node `/aquafeed/device/` di Firebase melalui `deviceProvider`. Jika status berubah di sisi alat, UI diperbarui secara otomatis tanpa refresh.
 
-### B. Smart Feeding Control (Sistem Kontrol Pakan Cerdas)
-*   **Fungsi**: Memungkinkan pengguna menentukan dosis pakan dalam satuan gram dan mengirimkan perintah pemberian pakan.
-*   **Implementasi Kode (`lib/widgets/feeding_control.dart`)**:
-    *   **Logic (Logika)**: Menggunakan `FeedNotifier` di Riverpod untuk menyimpan *state* (kondisi) dosis saat ini.
-    *   **Metode**: Terdapat fungsi `incrementDosage()` (tambah dosis) dan `decrementDosage()` (kurangi dosis).
-    *   **Eksekusi**: Tombol "Beri Makan" memanggil fungsi `dispenseFeed()`, yang secara logis mengurangi total stok pakan berdasarkan dosis yang dikirimkan.
+### B. Smart Feeding Control (Kontrol Pakan Cerdas)
+*   **Fungsi**: Kontrol presisi pemberian pakan berdasarkan dosis (gram).
+*   **Implementasi**:
+    *   Pengguna mengatur dosis di `lib/widgets/feeding_control.dart`.
+    *   Saat tombol ditekan, aplikasi mengirim string `"dispense"` ke node `/aquafeed/command/action` di Firebase.
+    *   ESP32 mendeteksi perubahan ini, menggerakkan servo, lalu mengembalikan status ke `"idle"`.
 
 ### C. Monitoring Stok Pakan (Inventory Tracking)
-*   **Fungsi**: Menampilkan secara visual sisa pakan yang tersedia di dalam wadah perangkat IoT.
-*   **Implementasi Kode**:
-    *   Berada di `lib/widgets/status_cards.dart`.
-    *   Menggunakan widget `LinearProgressIndicator` (bar progres).
-    *   **Perhitungan Dinamis**: Nilai bar progres dihitung secara matematis menggunakan rumus: `feedState.currentStock / feedState.maxCapacity`. Hal ini menunjukkan pemahaman integrasi logika matematika dasar ke dalam antarmuka visual.
+*   **Fungsi**: Melacak sisa pakan di wadah.
+*   **Logika**: Menggunakan perhitungan matematis dinamis: `currentStock / maxCapacity`. Data stok dikelola oleh `feed_provider.dart` dan disinkronkan ke Firebase.
 
-### D. Activity Log (Riwayat Aktivitas)
-*   **Fungsi**: Mencatat riwayat historis operasional alat (misalnya kapan pakan terakhir diberikan).
-*   **Implementasi Kode**:
-    *   Berada di `lib/widgets/activity_log.dart`.
-    *   Menggunakan `ListView.builder` untuk menampilkan daftar riwayat secara dinamis dan efisien, berapapun jumlah datanya.
+### D. Activity Log & Analytics (Riwayat & Statistik)
+*   **Activity Log**: Mencatat setiap sesi pemberian pakan (Waktu, Dosis, Status) di `lib/providers/log_provider.dart`.
+*   **Analytics**: Memvisualisasikan data pemberian pakan dalam bentuk grafik menggunakan library `fl_chart`. Data diolah melalui `analytics_provider.dart`.
 
 ---
 
-## 3. Penjelasan Struktur Folder (Arsitektur Direktori)
+## 3. Integrasi Hardware & Backend
 
-Struktur proyek ini menerapkan prinsip *Separation of Concerns* (pemisahan tanggung jawab), yang sangat disukai oleh dosen penguji karena menunjukkan standar penulisan kode yang baik (Clean Code):
+### A. Firmware ESP32-CAM (`esp32_firmware/feeder_esp32.ino`)
+*   **Konektivitas**: Menggunakan library `Firebase_ESP_Client` untuk komunikasi RTDB.
+*   **Kamera**: Menginisialisasi sensor kamera AI-Thinker untuk streaming MJPEG di port lokal.
+*   **Aktuator**: Menggunakan `ledcWrite` untuk kontrol presisi motor servo yang membuka/menutup katup pakan.
 
-1.  **`lib/main.dart`**: Titik masuk (*entry point*) aplikasi. Di sini aplikasi dibungkus dengan `ProviderScope`, yang merupakan syarat mutlak agar Riverpod dapat mendistribusikan data ke seluruh aplikasi.
-2.  **`lib/providers/`**: Direktori ini khusus menampung *Business Logic*. Semua perhitungan data, integrasi sensor, dan status tersimpan di sini, terpisah dari desain tampilan.
-3.  **`lib/widgets/`**: Menampung komponen UI (*User Interface*) yang bersifat modular. Memecah layar utama menjadi potongan-potongan kecil (seperti `feeding_control.dart`, `custom_header.dart`) membuat kode mudah dibaca, dirawat, dan diuji.
-4.  **`lib/theme.dart`**: Sentralisasi desain. Menyimpan definisi warna dan gaya huruf (*typography*), sehingga konsistensi desain terjamin di seluruh aplikasi.
+### B. Struktur Database (Firebase RTDB)
+*   `/aquafeed/command/action`: Menerima instruksi (contoh: `"dispense"`).
+*   `/aquafeed/status/`: Menyimpan data sensor dan kondisi alat saat ini.
+*   `/aquafeed/logs/`: Menyimpan data historis pemberian pakan.
+
+---
+
+## 4. Struktur Folder & Clean Code
+
+1.  **`lib/providers/`**: (Business Logic) Tempat pengelolaan data dan komunikasi API/Firebase.
+2.  **`lib/widgets/`**: (Modular UI) Komponen antarmuka yang dapat digunakan kembali (Reusable).
+3.  **`lib/screens/`**: (Pages) Definisi halaman utama dan navigasi.
+4.  **`lib/theme.dart`**: (Styling) Pusat konfigurasi warna dan tipografi.
 
 ---
 
-## 4. Analisis Pemecahan Masalah (Problem Solving)
+## 5. Analisis Pemecahan Masalah (Engineering Decisions)
 
-Jika dosen bertanya mengenai kendala teknis yang dihadapi selama pengembangan, gunakan penjelasan ini:
-
-> *"Selama pengembangan, saya menghadapi tantangan terkait kompatibilitas alat pembangunan (build tools). Plugin penyimpanan lokal membutuhkan **Android NDK (Native Development Kit)** versi spesifik (27+). Selain itu, terjadi konflik *versioning* antara Flutter SDK dan library Riverpod versi 3 terbaru.*
->
-> *Sebagai keputusan *engineering*, saya melakukan penyesuaian versi NDK di Gradle untuk memenuhi standar plugin, dan memutuskan untuk menggunakan **Riverpod versi 2.6.1**. Versi 2.x terbukti sangat stabil (Production Ready) dan memiliki kompatibilitas penuh dengan sistem Flutter yang saya gunakan, tanpa mengorbankan performa aplikasi."*
+*   **Pemilihan Versi Library**: Menggunakan Riverpod 2.6.1 karena stabilitasnya dibandingkan versi 3 yang masih memiliki banyak perubahan mendasar (*breaking changes*).
+*   **Android Compatibility**: Penyesuaian NDK versi 27+ di `build.gradle` untuk mendukung library native yang dibutuhkan oleh plugin penyimpanan.
+*   **Efisiensi Data**: Penggunaan Firebase RTDB (bukan Firestore) dipilih karena latensi yang lebih rendah untuk perintah kontrol real-time.
 
 ---
-*Semoga sukses untuk presentasi Tugas Akhirnya!*
+*Dokumen ini diperbarui secara otomatis untuk mencerminkan status pengembangan terbaru.*

@@ -6,7 +6,13 @@ import 'theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    // Firebase already initialized, continue
+    print('Firebase init note: $e');
+  }
   
   runApp(
     const ProviderScope(

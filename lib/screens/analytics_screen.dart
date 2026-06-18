@@ -270,10 +270,10 @@ class AnalyticsScreen extends ConsumerWidget {
             drawVerticalLine: false,
             horizontalInterval: ceilingY / 4,
             getDrawingHorizontalLine: (value) {
-              return FlLine(
-                color: AppTheme.cardBg.withOpacity(0.5),
-                strokeWidth: 1,
-              );
+return FlLine(
+                 color: AppTheme.cardBg.withValues(alpha: 0.5),
+                 strokeWidth: 1,
+               );
             },
           ),
           borderData: FlBorderData(show: false),
@@ -284,9 +284,9 @@ class AnalyticsScreen extends ConsumerWidget {
             return BarChartGroupData(
               x: index,
               barRods: [
-                BarChartRodData(
-                  toY: item.totalGram < 0.5 ? 0 : item.totalGram,
-                  color: isToday ? AppTheme.accent : AppTheme.accent.withOpacity(0.5),
+BarChartRodData(
+                   toY: item.totalGram < 0.5 ? 0 : item.totalGram,
+                   color: isToday ? AppTheme.accent : AppTheme.accent.withValues(alpha: 0.5),
                   width: 18,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(4),
