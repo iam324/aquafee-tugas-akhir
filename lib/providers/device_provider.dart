@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +33,8 @@ class DeviceState {
 
 class DeviceNotifier extends Notifier<DeviceState> {
   late final DatabaseReference _db;
+  Timer? _pingTimer;
+  DateTime? _lastPing;
 
   @override
   DeviceState build() {
@@ -51,11 +54,10 @@ class DeviceNotifier extends Notifier<DeviceState> {
               state = state.copyWith(status: value.toString());
             }
           } catch (e) {
-            print('Error parsing device_status: $e');
+            // Error parsing device_status
           }
         },
         onError: (error) {
-          print('Error listening to device_status: $error');
           state = state.copyWith(isFirebaseConnected: false);
         },
       );
@@ -68,11 +70,10 @@ class DeviceNotifier extends Notifier<DeviceState> {
               state = state.copyWith(valveStatus: value.toString());
             }
           } catch (e) {
-            print('Error parsing valve_status: $e');
+            // Error parsing valve_status
           }
         },
         onError: (error) {
-          print('Error listening to valve_status: $error');
           state = state.copyWith(isFirebaseConnected: false);
         },
       );
@@ -85,21 +86,56 @@ class DeviceNotifier extends Notifier<DeviceState> {
               state = state.copyWith(servoStatus: value.toString());
             }
           } catch (e) {
-            print('Error parsing servo_status: $e');
+            // Error parsing servo_status
           }
         },
         onError: (error) {
-          print('Error listening to servo_status: $error');
-          state = state.copyWith(isFirebaseConnected: false);
+          // Error listening to servo_status
         },
       );
+
+      // Dengarkan denyut (heartbeat) dari ESP32
+      _db.child('last_ping').onValue.listen(
+        (event) {
+          try {
+            // Kita tidak peduli isinya apa, yang penting node ini berubah nilainya
+            if (event.snapshot.value != null) {
+              _lastPing = DateTime.now(); // Catat waktu saat ping diterima di HP
+            }
+          } catch (e) {
+            // Error parsing last_ping
+          }
+        },
+      );
+
+      // Cek setiap 3 detik apakah ESP32 masih berdenyut
+      _pingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+        if (_lastPing != null) {
+          final diff = DateTime.now().difference(_lastPing!).inSeconds;
+          // Jika tidak ada update selama lebih dari 12 detik, anggap Offline
+          if (diff > 12) {
+            if (state.isFirebaseConnected) {
+              state = state.copyWith(isFirebaseConnected: false, status: 'Offline');
+            }
+          } else {
+            if (!state.isFirebaseConnected) {
+              state = state.copyWith(isFirebaseConnected: true, status: 'Online');
+            }
+          }
+        }
+      });
+
+      ref.onDispose(() {
+        _pingTimer?.cancel();
+      });
+
     } catch (e) {
-      print('Error initializing device provider: $e');
+      // Error initializing device provider
     }
 
     return DeviceState(
-      isFirebaseConnected: true,
-      status: 'Standby',
+      isFirebaseConnected: false, // Default ke offline sampai ada ping
+      status: 'Mencari Perangkat...',
       valveStatus: 'Tertutup',
       servoStatus: 'Ready',
     );
@@ -109,7 +145,7 @@ class DeviceNotifier extends Notifier<DeviceState> {
     try {
       state = state.copyWith(isFirebaseConnected: !state.isFirebaseConnected);
     } catch (e) {
-      print('Error toggling connection: $e');
+      // Error toggling connection
     }
   }
 }

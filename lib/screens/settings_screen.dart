@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/feed_provider.dart';
+import '../providers/demo_mode_provider.dart';
+
 import '../theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -32,9 +34,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _reminderTime = TimeOfDay(hour: hour, minute: minute);
       });
     } catch (e) {
-      print('Error loading settings: $e');
+      // Error loading settings
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -56,10 +60,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           data: ThemeData.dark().copyWith(
             colorScheme: const ColorScheme.dark(
               primary: AppTheme.accent,
-              onPrimary: Colors.white,
-              surface: AppTheme.surface,
+              surface: AppTheme.surfaceLight,
+              onSurface: AppTheme.primaryText,
             ),
-            dialogBackgroundColor: AppTheme.surface,
+            dialogTheme: const DialogThemeData(
+              backgroundColor: AppTheme.surface,
+            ),
           ),
           child: child!,
         );
@@ -68,19 +74,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (picked != null) {
       setState(() => _reminderTime = picked);
       await _saveReminderSettings(_isReminderEnabled, picked);
-    }
-  }
-
-  Future<void> _resetStock() async {
-    final feedNotifier = ref.read(feedProvider.notifier);
-    await feedNotifier.resetStock();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Stok pakan direset ke kapasitas maksimum'),
-          backgroundColor: AppTheme.success,
-        ),
-      );
     }
   }
 
@@ -93,68 +86,59 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       appBar: AppBar(
         backgroundColor: AppTheme.background,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Pengaturan',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        scrolledUnderElevation: 0,
+        leading: _BackBtn(onTap: () => Navigator.of(context).pop()),
+        title: Text('Settings', style: AppTheme.headlineMedium),
         centerTitle: true,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSection('Pemberian Pakan Otomatis'),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
+                  _buildSectionHeader('Automations'),
                   _buildReminderCard(),
                   const SizedBox(height: 24),
-                  _buildSection('Manajemen Stok'),
-                  const SizedBox(height: 12),
+                  _buildSectionHeader('Testing'),
+                  _buildDemoModeCard(),
+                  const SizedBox(height: 24),
+                  _buildSectionHeader('Storage Management'),
                   _buildStockCard(feedState),
                   const SizedBox(height: 24),
-                  _buildSection('Tentang Aplikasi'),
-                  const SizedBox(height: 12),
+                  _buildSectionHeader('System Info'),
                   _buildAboutCard(),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
     );
   }
 
-  Widget _buildSection(String title) {
-    return Text(
-      title.toUpperCase(),
-      style: AppTheme.titleSmall.copyWith(color: AppTheme.secondaryText),
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 12),
+      child: Text(
+        title.toUpperCase(),
+        style: AppTheme.titleSmall,
+      ),
     );
   }
 
   Widget _buildReminderCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.cardBg, width: 1),
-      ),
+    return _SettingsCard(
       child: Column(
         children: [
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(
-              'Aktifkan Reminder Harian',
-              style: AppTheme.bodyMedium.copyWith(color: Colors.white),
-            ),
+            title: Text('Daily Reminder', style: AppTheme.titleMedium),
             subtitle: Text(
               _isReminderEnabled && _reminderTime != null
-                  ? 'Setiap hari: ${_reminderTime!.format(context)}'
-                  : 'Nonaktif',
-              style: AppTheme.captionSmall,
+                  ? 'Remind every day at ${_reminderTime!.format(context)}'
+                  : 'Get notified when it\'s feeding time',
+              style: AppTheme.bodySmall,
             ),
             value: _isReminderEnabled,
             onChanged: (value) async {
@@ -164,16 +148,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             activeColor: AppTheme.accent,
           ),
           if (_isReminderEnabled) ...[
-            const SizedBox(height: 8),
+            const Divider(height: 32, color: AppTheme.surfaceLight),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(
-                'Waktu Reminder',
-                style: AppTheme.bodyMedium.copyWith(color: Colors.white),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: AppTheme.accent.withAlpha((255 * 0.1).round()), borderRadius: BorderRadius.circular(AppTheme.radiusInput)),
+                child: const Icon(Icons.access_time_outlined, color: AppTheme.accent, size: 20),
               ),
+              title: Text('Reminder Time', style: AppTheme.bodyMedium),
               trailing: Text(
                 _reminderTime?.format(context) ?? '-',
-                style: AppTheme.labelMedium.copyWith(color: AppTheme.accent),
+                style: AppTheme.labelLarge.copyWith(color: AppTheme.accent),
               ),
               onTap: _selectTime,
             ),
@@ -183,38 +169,61 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildStockCard(FeedState feedState) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.cardBg, width: 1),
-      ),
-      child: Row(
+  Widget _buildDemoModeCard() {
+    final isDemoMode = ref.watch(demoModeProvider);
+    return _SettingsCard(
+      child: Column(
         children: [
-          Icon(Icons.warning_amber, color: AppTheme.warning, size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Row(
               children: [
-                Text(
-                  'Reset Stok Pakan',
-                  style: AppTheme.bodyMedium.copyWith(color: Colors.white),
-                ),
-                Text(
-                  'Current: ${feedState.currentStock.toInt()}g / ${feedState.maxCapacity.toInt()}g',
-                  style: AppTheme.captionSmall,
+                Text('Demo Mode', style: AppTheme.titleMedium),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warning.withAlpha((255 * 0.2).round()),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  ),
+                  child: Text(
+                    'TESTING',
+                    style: AppTheme.labelMedium.copyWith(
+                      color: AppTheme.warning,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ],
             ),
+            subtitle: Text(
+              isDemoMode
+                  ? 'Aktif: Tombol pakan berfungsi tanpa ESP32'
+                  : 'Nonaktif: Tombol pakan hanya aktif saat alat online',
+              style: AppTheme.bodySmall,
+            ),
+            value: isDemoMode,
+            onChanged: (value) async {
+              await ref.read(demoModeProvider.notifier).toggleDemoMode();
+            },
+            activeColor: AppTheme.warning,
           ),
-          TextButton(
-            onPressed: _resetStock,
-            child: Text(
-              'RESET',
-              style: AppTheme.labelMedium.copyWith(color: AppTheme.warning),
+          const Divider(height: 32, color: AppTheme.surfaceLight),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.warning.withAlpha((255 * 0.1).round()),
+                borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+              ),
+              child: const Icon(Icons.science_outlined, color: AppTheme.warning, size: 20),
+            ),
+            title: Text('Mode Pengujian', style: AppTheme.bodyMedium),
+            subtitle: Text(
+              'Digunakan untuk demo TA tanpa hardware',
+              style: AppTheme.bodySmall,
             ),
           ),
         ],
@@ -222,31 +231,183 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildAboutCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.cardBg, width: 1),
-      ),
+  Widget _buildStockCard(FeedState feedState) {
+    return _SettingsCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'AquaFeed v1.0.0',
-            style: AppTheme.titleMedium.copyWith(color: AppTheme.accent),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: AppTheme.warning.withAlpha((255 * 0.1).round()), borderRadius: BorderRadius.circular(AppTheme.radiusInput)),
+                child: const Icon(Icons.inventory_2_outlined, color: AppTheme.warning, size: 20),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Reset Food Stock', style: AppTheme.titleMedium),
+                    Text('Refill the inventory to maximum', style: AppTheme.bodySmall),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Aplikasi monitoring dan kontrol pemberian pakan otomatis untuk sistem IoT budidaya.',
-            style: AppTheme.bodySmall.copyWith(color: AppTheme.secondaryText),
+          const SizedBox(height: 20),
+          _ActionBtn(
+            label: 'Refill to ${feedState.maxCapacity.toInt()}g',
+            icon: Icons.refresh_rounded,
+            color: AppTheme.warning,
+            onTap: () async {
+              await ref.read(feedProvider.notifier).resetStock();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Inventory refilled successfully'),
+                    backgroundColor: AppTheme.statusOnline,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
+                  ),
+                );
+              }
+            },
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Dibuat dengan Flutter & Riverpod',
-            style: AppTheme.captionSmall,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutCard() {
+    return _SettingsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppTheme.accent,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                ),
+                child: const Icon(Icons.eco_outlined, color: Colors.black, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('AquaFeed Pro', style: AppTheme.titleLarge),
+                  Text('Version 1.0.0 (Stable)', style: AppTheme.bodySmall),
+                ],
+              ),
+            ],
           ),
+          const SizedBox(height: 20),
+          Text(
+            'Industrial-grade IoT monitoring and automatic feeding system designed for smart aquaculture management.',
+            style: AppTheme.bodySmall.copyWith(height: 1.6),
+          ),
+          const Divider(height: 32, color: AppTheme.surfaceLight),
+          _InfoRow(label: 'Platform', value: 'Flutter + Riverpod'),
+          _InfoRow(label: 'Backend', value: 'Firebase RTDB'),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsCard extends StatelessWidget {
+  final Widget child;
+  const _SettingsCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _BackBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  const _BackBtn({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceLight,
+          borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+        ),
+        child: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.primaryText, size: 18),
+      ),
+    );
+  }
+}
+
+class _ActionBtn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionBtn({required this.label, required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: color.withAlpha((255 * 0.1).round()),
+            borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+            border: Border.all(color: color.withAlpha((255 * 0.2).round())),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 8),
+              Text(label, style: AppTheme.labelLarge.copyWith(color: color)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _InfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: AppTheme.bodySmall),
+          Text(value, style: AppTheme.labelMedium.copyWith(color: AppTheme.secondaryText)),
         ],
       ),
     );

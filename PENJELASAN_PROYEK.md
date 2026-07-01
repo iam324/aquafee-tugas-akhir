@@ -35,9 +35,8 @@ Proyek ini adalah sistem **Smart Fish Feeder** berbasis IoT yang menghubungkan p
 *   **Fungsi**: Melacak sisa pakan di wadah.
 *   **Logika**: Menggunakan perhitungan matematis dinamis: `currentStock / maxCapacity`. Data stok dikelola oleh `feed_provider.dart` dan disinkronkan ke Firebase.
 
-### D. Activity Log & Analytics (Riwayat & Statistik)
+### D. Activity Log (Riwayat)
 *   **Activity Log**: Mencatat setiap sesi pemberian pakan (Waktu, Dosis, Status) di `lib/providers/log_provider.dart`.
-*   **Analytics**: Memvisualisasikan data pemberian pakan dalam bentuk grafik menggunakan library `fl_chart`. Data diolah melalui `analytics_provider.dart`.
 
 ---
 

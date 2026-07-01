@@ -14,38 +14,49 @@ class ActivityLogSection extends ConsumerWidget {
     final isLoading = logState.isLoading;
     final error = logState.error;
 
-    // Filter hanya hari ini (today's logs)
     final todayLogs = _getTodayLogs(logs).take(3).toList();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'HISTORY (Hari Ini)',
-                style: AppTheme.titleSmall.copyWith(color: AppTheme.secondaryText),
+              Row(
+                children: [
+                  const Icon(Icons.bar_chart_rounded, color: AppTheme.accent, size: 20),
+                  const SizedBox(width: 10),
+                  Text(
+                    'AKTIVITAS HARI INI',
+                    style: AppTheme.titleSmall,
+                  ),
+                ],
               ),
               if (logs.isNotEmpty && !isLoading)
                 GestureDetector(
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const HistoryDetailScreen(),
-                      ),
+                      MaterialPageRoute(builder: (context) => const HistoryDetailScreen()),
                     );
                   },
-                  child: Text(
-                    'Lihat Semua',
-                    style: AppTheme.labelSmall.copyWith(color: AppTheme.accent),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceLight,
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                      border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
+                    ),
+                    child: Text(
+                      'Semua',
+                      style: AppTheme.labelMedium.copyWith(color: AppTheme.primaryText, fontSize: 11),
+                    ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
           if (error != null)
             _buildErrorState(error)
           else if (isLoading && logs.isEmpty)
@@ -56,7 +67,7 @@ class ActivityLogSection extends ConsumerWidget {
             _buildNoTodayLogsState()
           else
             _buildLogsList(todayLogs, context, ref),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
         ],
       ),
     );
@@ -73,39 +84,20 @@ class ActivityLogSection extends ConsumerWidget {
 
   Widget _buildErrorState(String error) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.warning.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3), width: 1),
+        color: AppTheme.error.withAlpha((255 * 0.05).round()),
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        border: Border.all(color: AppTheme.error.withAlpha((255 * 0.1).round())),
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppTheme.warning.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.warning_amber_rounded, color: AppTheme.warning, size: 20),
-          ),
-          const SizedBox(width: 12),
+          const Icon(Icons.error_outline_rounded, color: AppTheme.error, size: 20),
+          const SizedBox(width: 16),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Terjadi Kesalahan',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  error,
-                  style: const TextStyle(fontSize: 12, color: AppTheme.secondaryText),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+            child: Text(
+              error,
+              style: AppTheme.bodySmall.copyWith(color: AppTheme.error.withAlpha((255 * 0.8).round())),
             ),
           ),
         ],
@@ -114,121 +106,24 @@ class ActivityLogSection extends ConsumerWidget {
   }
 
   Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.all(40),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.history, size: 48, color: AppTheme.secondaryText.withValues(alpha: 0.5)),
-          const SizedBox(height: 12),
-          const Text(
-            'Belum Ada History',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Mulai beri makan untuk lihat riwayat aktivitas',
-            style: TextStyle(fontSize: 12, color: AppTheme.secondaryText),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+    return _InfoPlaceholder(
+      icon: Icons.history_toggle_off_outlined,
+      title: 'Belum Ada History',
+      subtitle: 'Aktivitas Anda akan muncul di sini',
     );
   }
 
   Widget _buildNoTodayLogsState() {
-    return Container(
-      padding: const EdgeInsets.all(40),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.today, size: 48, color: AppTheme.secondaryText.withValues(alpha: 0.5)),
-          const SizedBox(height: 12),
-          const Text(
-            'Belum Ada Aktivitas Hari Ini',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Mulai beri makan ikan Anda',
-            style: TextStyle(fontSize: 12, color: AppTheme.secondaryText),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+    return _InfoPlaceholder(
+      icon: Icons.calendar_today_outlined,
+      title: 'Belum Ada Aktivitas',
+      subtitle: 'Belum ada pemberian pakan hari ini',
     );
   }
 
   Widget _buildLoadingState() {
     return Column(
-      children: List.generate(
-        3,
-        (index) => Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: _buildSkeletonLoader(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSkeletonLoader() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppTheme.cardBg,
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  height: 12,
-                  width: 150,
-                  decoration: BoxDecoration(
-                    color: AppTheme.cardBg,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  height: 10,
-                  width: 100,
-                  decoration: BoxDecoration(
-                    color: AppTheme.cardBg,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: 60,
-            height: 20,
-            decoration: BoxDecoration(
-              color: AppTheme.cardBg,
-              borderRadius: BorderRadius.circular(6),
-            ),
-          ),
-        ],
-      ),
+      children: List.generate(3, (index) => _SkeletonItem()),
     );
   }
 
@@ -237,91 +132,132 @@ class ActivityLogSection extends ConsumerWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: logs.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 10),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final log = logs[index];
         final isSuccess = log.type == LogType.success;
+        final timeFormatted = "${log.timestamp.hour.toString().padLeft(2, '0')}:${log.timestamp.minute.toString().padLeft(2, '0')}";
 
         return Dismissible(
           key: Key(log.id ?? index.toString()),
+          direction: DismissDirection.endToStart,
           background: Container(
             decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(16),
+              color: AppTheme.error.withAlpha((255 * 0.2).round()),
+              borderRadius: BorderRadius.circular(AppTheme.radiusCard),
             ),
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 20),
-            child: const Icon(
-              Icons.delete_outline,
-              color: Colors.white,
-              size: 24,
-            ),
+            child: const Icon(Icons.delete_outline_rounded, color: AppTheme.error),
           ),
-          direction: DismissDirection.endToStart,
-          onDismissed: (direction) {
-            if (log.id != null) {
-              ref.read(logProvider.notifier).deleteLog(log.id!);
-            }
+          onDismissed: (_) {
+            if (log.id != null) ref.read(logProvider.notifier).deleteLog(log.id!);
           },
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+              border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: isSuccess ? AppTheme.success.withValues(alpha: 0.1) : AppTheme.warning.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    color: (isSuccess ? AppTheme.statusOnline : AppTheme.warning).withAlpha((255 * 0.1).round()),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusButton),
                   ),
                   child: Icon(
-                    isSuccess ? Icons.check : Icons.warning_amber_rounded,
-                    color: isSuccess ? AppTheme.success : AppTheme.warning,
+                    isSuccess ? Icons.check_circle_outline_rounded : Icons.priority_high_rounded,
+                    color: isSuccess ? AppTheme.statusOnline : AppTheme.warning,
                     size: 20,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         log.title,
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+                        style: AppTheme.titleMedium,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        log.time,
-                        style: const TextStyle(fontSize: 10, color: AppTheme.secondaryText),
+                        timeFormatted,
+                        style: AppTheme.bodySmall,
                       ),
                     ],
                   ),
                 ),
-                Row(
-                  children: [
-                    if (isSuccess)
-                      const Icon(Icons.check, color: AppTheme.success, size: 14)
-                    else
-                      const Text('!', style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 4),
-                    Text(
-                      log.status,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: isSuccess ? AppTheme.success : AppTheme.warning,
-                      ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceLight,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  ),
+                  child: Text(
+                    log.status,
+                    style: AppTheme.labelMedium.copyWith(
+                      color: isSuccess ? AppTheme.statusOnline : AppTheme.warning,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _InfoPlaceholder extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _InfoPlaceholder({required this.icon, required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 36, color: AppTheme.secondaryText.withAlpha((255 * 0.3).round())),
+          const SizedBox(height: 16),
+          Text(title, style: AppTheme.titleMedium.copyWith(color: AppTheme.secondaryText)),
+          const SizedBox(height: 6),
+          Text(subtitle, style: AppTheme.bodySmall, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkeletonItem extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        height: 70,
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        ),
+      ),
     );
   }
 }

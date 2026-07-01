@@ -13,7 +13,6 @@ class HistoryDetailScreen extends ConsumerWidget {
     final isLoading = logState.isLoading;
     final error = logState.error;
 
-    // Group logs by date
     final groupedLogs = _groupLogsByDate(logs);
 
     return Scaffold(
@@ -21,18 +20,13 @@ class HistoryDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppTheme.background,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'Semua History',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        scrolledUnderElevation: 0,
+        leading: _BackBtn(onTap: () => Navigator.of(context).pop()),
+        title: Text('Activity History', style: AppTheme.headlineMedium),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -63,7 +57,6 @@ class HistoryDetailScreen extends ConsumerWidget {
       } else if (_isSameDay(logDate, today.subtract(const Duration(days: 1)))) {
         dateKey = 'Kemarin';
       } else {
-        // Format: "Jum, 5 Juni 2026"
         dateKey = _formatDateLabel(logDate);
       }
 
@@ -81,44 +74,27 @@ class HistoryDetailScreen extends ConsumerWidget {
   String _formatDateLabel(DateTime date) {
     final dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
     final monthNames = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember'
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
     return '${dayNames[date.weekday - 1]}, ${date.day} ${monthNames[date.month - 1]} ${date.year}';
   }
 
   Widget _buildErrorState(String error) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.warning.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3), width: 1),
+        color: AppTheme.error.withAlpha((255 * 0.05).round()),
+        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        border: Border.all(color: AppTheme.error.withAlpha((255 * 0.1).round())),
       ),
       child: Column(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: AppTheme.warning, size: 32),
-          const SizedBox(height: 12),
-          const Text(
-            'Terjadi Kesalahan',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
+          const Icon(Icons.error_outline_rounded, color: AppTheme.error, size: 32),
+          const SizedBox(height: 16),
+          Text('Terjadi Kesalahan', style: AppTheme.titleLarge),
           const SizedBox(height: 8),
-          Text(
-            error,
-            style: const TextStyle(fontSize: 13, color: AppTheme.secondaryText),
-            textAlign: TextAlign.center,
-          ),
+          Text(error, style: AppTheme.bodySmall, textAlign: TextAlign.center),
         ],
       ),
     );
@@ -129,20 +105,16 @@ class HistoryDetailScreen extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 40),
-          Icon(Icons.history, size: 64, color: AppTheme.secondaryText.withValues(alpha: 0.5)),
-          const SizedBox(height: 16),
-          const Text(
-            'Belum Ada History',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
+          const SizedBox(height: 80),
+          Icon(Icons.history_toggle_off_outlined, size: 64, color: AppTheme.secondaryText.withAlpha((255 * 0.2).round())),
+          const SizedBox(height: 24),
+          Text('No History Found', style: AppTheme.headlineMedium.copyWith(color: AppTheme.secondaryText)),
           const SizedBox(height: 8),
-          const Text(
-            'Mulai beri makan untuk lihat riwayat aktivitas',
-            style: TextStyle(fontSize: 13, color: AppTheme.secondaryText),
+          Text(
+            'Activities will appear here once you start feeding.',
+            style: AppTheme.bodySmall,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 40),
         ],
       ),
     );
@@ -150,60 +122,7 @@ class HistoryDetailScreen extends ConsumerWidget {
 
   Widget _buildLoadingState() {
     return Column(
-      children: List.generate(
-        5,
-        (index) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _buildSkeletonLoader(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSkeletonLoader() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppTheme.cardBg,
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  height: 12,
-                  width: 120,
-                  decoration: BoxDecoration(
-                    color: AppTheme.cardBg,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  height: 10,
-                  width: 80,
-                  decoration: BoxDecoration(
-                    color: AppTheme.cardBg,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      children: List.generate(5, (index) => _SkeletonItem()),
     );
   }
 
@@ -224,7 +143,6 @@ class HistoryDetailScreen extends ConsumerWidget {
   }
 
   List<String> _sortDateKeys(List<String> keys) {
-    // Priority order: Hari Ini, Kemarin, then by date
     final priority = {'Hari Ini': 0, 'Kemarin': 1};
     keys.sort((a, b) {
       final aPriority = priority[a] ?? 2;
@@ -244,28 +162,18 @@ class HistoryDetailScreen extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
           child: Row(
             children: [
               Text(
-                dateKey,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 0.5,
-                ),
+                dateKey.toUpperCase(),
+                style: AppTheme.titleSmall,
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppTheme.accent.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${logs.length} item',
-                  style: AppTheme.labelSmall.copyWith(color: AppTheme.accent),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  height: 1,
+                  color: Colors.white.withAlpha((255 * 0.05).round()),
                 ),
               ),
             ],
@@ -275,83 +183,72 @@ class HistoryDetailScreen extends ConsumerWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: logs.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 8),
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final log = logs[index];
             final isSuccess = log.type == LogType.success;
+            final timeFormatted = "${log.timestamp.hour.toString().padLeft(2, '0')}:${log.timestamp.minute.toString().padLeft(2, '0')}";
 
             return Dismissible(
               key: Key(log.id ?? '$dateKey$index'),
+              direction: DismissDirection.endToStart,
               background: Container(
                 decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.8),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppTheme.error.withAlpha((255 * 0.2).round()),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusCard),
                 ),
                 alignment: Alignment.centerRight,
                 padding: const EdgeInsets.only(right: 20),
-                child: const Icon(
-                  Icons.delete_outline,
-                  color: Colors.white,
-                  size: 20,
-                ),
+                child: const Icon(Icons.delete_outline_rounded, color: AppTheme.error),
               ),
-              direction: DismissDirection.endToStart,
-              onDismissed: (direction) {
-                if (log.id != null) {
-                  ref.read(logProvider.notifier).deleteLog(log.id!);
-                }
+              onDismissed: (_) {
+                if (log.id != null) ref.read(logProvider.notifier).deleteLog(log.id!);
               },
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.cardBg, width: 0.5),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                  border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
                 ),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
-                        color: isSuccess
-                            ? AppTheme.success.withValues(alpha: 0.1)
-                            : AppTheme.warning.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
+                        color: (isSuccess ? AppTheme.statusOnline : AppTheme.warning).withAlpha((255 * 0.1).round()),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusButton),
                       ),
                       child: Icon(
-                        isSuccess ? Icons.check_circle : Icons.warning_amber_rounded,
-                        color: isSuccess ? AppTheme.success : AppTheme.warning,
-                        size: 18,
+                        isSuccess ? Icons.check_circle_outline_rounded : Icons.priority_high_rounded,
+                        color: isSuccess ? AppTheme.statusOnline : AppTheme.warning,
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            log.title,
-                            style: AppTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            log.time,
-                            style: AppTheme.captionSmall,
-                          ),
+                          Text(log.title, style: AppTheme.titleMedium),
+                          const SizedBox(height: 4),
+                          Text(timeFormatted, style: AppTheme.bodySmall),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color:
-                            isSuccess ? AppTheme.success.withValues(alpha: 0.1) : AppTheme.warning.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
+                        color: AppTheme.surfaceLight,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                       ),
                       child: Text(
                         log.status,
-                        style: AppTheme.labelSmall.copyWith(
-                          color: isSuccess ? AppTheme.success : AppTheme.warning,
+                        style: AppTheme.labelMedium.copyWith(
+                          color: isSuccess ? AppTheme.statusOnline : AppTheme.warning,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
                         ),
                       ),
                     ),
@@ -361,8 +258,44 @@ class HistoryDetailScreen extends ConsumerWidget {
             );
           },
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
       ],
+    );
+  }
+}
+
+class _BackBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  const _BackBtn({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceLight,
+          borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+        ),
+        child: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.primaryText, size: 18),
+      ),
+    );
+  }
+}
+
+class _SkeletonItem extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        height: 70,
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        ),
+      ),
     );
   }
 }

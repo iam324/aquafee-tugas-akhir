@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'home_screen.dart';
 import 'theme.dart';
+import 'providers/demo_mode_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,7 +12,6 @@ void main() async {
     await Firebase.initializeApp();
   } catch (e) {
     // Firebase already initialized, continue
-    print('Firebase init note: $e');
   }
   
   runApp(
@@ -21,11 +21,14 @@ void main() async {
   );
 }
 
-class AquaFeedApp extends StatelessWidget {
+class AquaFeedApp extends ConsumerWidget {
   const AquaFeedApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Muat status demo mode dari penyimpanan lokal
+    ref.read(demoModeProvider.notifier).loadDemoMode();
+    
     return MaterialApp(
       title: 'AquaFeed',
       debugShowCheckedModeBanner: false,

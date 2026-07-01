@@ -3,7 +3,6 @@ import 'widgets/custom_header.dart';
 import 'widgets/live_camera_card.dart';
 import 'widgets/status_cards.dart';
 import 'widgets/feeding_control.dart';
-import 'widgets/analytics_summary_card.dart';
 import 'widgets/activity_log.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -14,14 +13,19 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
+          physics: BouncingScrollPhysics(),
           child: Column(
             children: [
               CustomHeader(),
+              SizedBox(height: 8),
               LiveCameraCard(),
+              SizedBox(height: 12),
               StatusCardsSection(),
+              SizedBox(height: 16),
               FeedingControlPanel(),
-              AnalyticsSummaryCard(),
+              SizedBox(height: 20),
               ActivityLogSection(),
+              SizedBox(height: 32),
             ],
           ),
         ),

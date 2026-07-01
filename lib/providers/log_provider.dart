@@ -104,7 +104,6 @@ class LogNotifier extends Notifier<LogState> {
               isLoading: false,
               error: 'Error parsing data: ${e.toString()}',
             );
-            print('Error parsing Firebase data: $e');
           }
         },
         onError: (error) {
@@ -112,7 +111,6 @@ class LogNotifier extends Notifier<LogState> {
             isLoading: false,
             error: 'Koneksi Firebase gagal: ${error.toString()}',
           );
-          print('Firebase listener error: $error');
         },
       );
     } catch (e) {
@@ -120,7 +118,6 @@ class LogNotifier extends Notifier<LogState> {
         isLoading: false,
         error: 'Error koneksi Firebase: ${e.toString()}',
       );
-      print('Error initializing Firebase listener: $e');
     }
   }
 
@@ -129,7 +126,6 @@ class LogNotifier extends Notifier<LogState> {
       await _db.push().set(log.toJson());
     } catch (e) {
       state = state.copyWith(error: 'Gagal menambah log: ${e.toString()}');
-      print('Error adding log: $e');
       rethrow;
     }
   }
@@ -139,7 +135,6 @@ class LogNotifier extends Notifier<LogState> {
       await _db.child(logId).remove();
     } catch (e) {
       state = state.copyWith(error: 'Gagal menghapus log: ${e.toString()}');
-      print('Error deleting log: $e');
       rethrow;
     }
   }
@@ -149,7 +144,6 @@ class LogNotifier extends Notifier<LogState> {
       await _db.remove();
     } catch (e) {
       state = state.copyWith(error: 'Gagal menghapus semua log: ${e.toString()}');
-      print('Error clearing logs: $e');
       rethrow;
     }
   }
@@ -181,7 +175,6 @@ class LogNotifier extends Notifier<LogState> {
       state = state.copyWith(error: null);
     } catch (e) {
       state = state.copyWith(error: 'Gagal seed demo data: ${e.toString()}');
-      print('Error seeding demo data: $e');
       rethrow;
     }
   }
@@ -190,4 +183,3 @@ class LogNotifier extends Notifier<LogState> {
 final logProvider = NotifierProvider<LogNotifier, LogState>(() {
   return LogNotifier();
 });
-

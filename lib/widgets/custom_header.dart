@@ -12,32 +12,31 @@ class CustomHeader extends ConsumerWidget {
     final deviceState = ref.watch(deviceProvider);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'AquaFeed',
-                style: AppTheme.displayMedium,
+                style: AppTheme.displaySmall.copyWith(color: AppTheme.primaryText),
               ),
               const SizedBox(height: 4),
               Row(
                 children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: deviceState.isFirebaseConnected ? AppTheme.success : Colors.grey,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
+                  _StatusIndicator(isActive: deviceState.isFirebaseConnected),
                   const SizedBox(width: 8),
                   Text(
-                    deviceState.isFirebaseConnected ? 'Firebase terhubung' : 'Firebase terputus',
-                    style: AppTheme.captionSmall.copyWith(color: AppTheme.success),
+                    deviceState.isFirebaseConnected ? 'System Online' : 'System Offline',
+                    style: AppTheme.labelMedium.copyWith(
+                      color: deviceState.isFirebaseConnected 
+                          ? AppTheme.statusOnline
+                          : AppTheme.secondaryText,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -45,39 +44,67 @@ class CustomHeader extends ConsumerWidget {
           ),
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.notifications_outlined,
-                  color: AppTheme.accent,
-                ),
+              _HeaderActionBtn(
+                icon: Icons.notifications_outlined,
+                onTap: () {},
               ),
-              const SizedBox(width: 8),
-              GestureDetector(
+              const SizedBox(width: 10),
+              _HeaderActionBtn(
+                icon: Icons.settings_outlined,
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (context) => const SettingsScreen()),
                   );
                 },
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.settings_outlined,
-                    color: AppTheme.accent,
-                  ),
-                ),
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StatusIndicator extends StatelessWidget {
+  final bool isActive;
+  const _StatusIndicator({required this.isActive});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: isActive ? AppTheme.statusOnline : AppTheme.error,
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+}
+
+class _HeaderActionBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _HeaderActionBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceLight,
+          borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+          border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
+        ),
+        child: Icon(
+          icon,
+          color: AppTheme.secondaryText,
+          size: 22,
+        ),
       ),
     );
   }

@@ -6,6 +6,17 @@
 #include <addons/TokenHelper.h>
 #include <addons/RTDBHelper.h>
 
+#include "HX711.h"
+
+// ==========================================
+// KONFIGURASI LOADCELL (HX711)
+// ==========================================
+const int LOADCELL_DOUT_PIN = 12;
+const int LOADCELL_SCK_PIN = 14;
+HX711 scale;
+float calibration_factor = 420.0; // TODO: Sesuaikan dengan kalibrasi Anda
+unsigned long lastWeightUpdate = 0;
+
 // ==========================================
 // PIN DEFINITIONS (AI THINKER MODEL)
 // ==========================================
@@ -29,20 +40,22 @@
 // ===========================
 // KONFIGURASI WIFI & FIREBASE
 // ===========================
-const char* ssid = "pejuybahlil";
-const char* password = "12345678";
+const char* ssid = "sendal0ucl";
+const char* password = "11111111";
 
 #define API_KEY "AIzaSyCPuyJBdxF2h-dwLCadbLHrGSYTVbyniVg"
 #define DATABASE_URL "https://aquafeed-f3451-default-rtdb.firebaseio.com/"
 
 // ===========================
-// KONFIGURASI SERVO
+// KONFIGURASI SERVO & DIAGNOSTIK
 // ===========================
-const int servoPin = 13;      // PIN DATA SERVO (Warna Oranye)
-const int statusLedPin = 33;  // LED kecil merah/biru di belakang
+const int servoPin = 14;      // PIN DATA SERVO (Warna Oranye)
+const int flashLedPin = 4;    // Lampu Flash Putih Terang
+const int statusLedPin = 33;  // LED kecil di belakang ESP32
 const int freq = 50;          
-const int pwmResolution = 10; 
+const int pwmResolution = 10; // Namanya diubah agar tidak bentrok
 
+// Nilai PWM untuk Core 3.x (0-1024)
 int dutyOpen = 77;   
 int dutyClose = 26;  
 
@@ -55,32 +68,40 @@ bool signupOK = false;
 void startCameraServer();
 
 void dispenseAction() {
-  Serial.println("\n[Action] MEMBERI MAKAN...");
+  Serial.println("\n[!] PERINTAH DITERIMA: SEDANG MEMBERI MAKAN...");
   
-  // LED belakang menyala (tanda proses)
-  digitalWrite(statusLedPin, LOW); 
+  digitalWrite(flashLedPin, HIGH);
   
-  // BUKA
-  ledcWrite(servoPin, dutyOpen);
+  Serial.println("[Servo] Membuka Katup...");
+  ledcWrite(servoPin, dutyOpen); // API Baru Core 3.x
   delay(2000); 
   
-  // TUTUP
-  ledcWrite(servoPin, dutyClose);
+  Serial.println("[Servo] Menutup Katup...");
+  ledcWrite(servoPin, dutyClose); // API Baru Core 3.x
   delay(1000); 
   
-  digitalWrite(statusLedPin, HIGH); 
-  Serial.println("[Action] SELESAI.\n");
+  digitalWrite(flashLedPin, LOW);
+  Serial.println("[!] SELESAI.\n");
 }
 
 void setup() {
   Serial.begin(115200);
   
+  pinMode(flashLedPin, OUTPUT);
   pinMode(statusLedPin, OUTPUT);
+  digitalWrite(flashLedPin, LOW);
   digitalWrite(statusLedPin, HIGH); 
 
   // SETUP SERVO
   ledcAttach(servoPin, freq, pwmResolution);
   ledcWrite(servoPin, dutyClose); 
+
+  // SETUP LOADCELL
+  Serial.println("Menginisialisasi Loadcell HX711...");
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+  scale.set_scale(calibration_factor);
+  scale.tare(); // Auto tare saat startup
+  Serial.println("Loadcell siap.");
 
   // --- CONFIG KAMERA ---
   camera_config_t config;
@@ -112,26 +133,55 @@ void setup() {
 
   esp_camera_init(&config);
 
+  // --- KONEKSI WIFI ---
+  Serial.print("Connecting to WiFi");
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    digitalWrite(statusLedPin, !digitalRead(statusLedPin));
   }
   digitalWrite(statusLedPin, LOW); 
   Serial.println("\nWiFi connected!");
 
+  // --- CONFIG FIREBASE ---
   configFb.api_key = API_KEY;
   configFb.database_url = DATABASE_URL;
-  Firebase.signUp(&configFb, &auth, "", "");
+  
+  if (Firebase.signUp(&configFb, &auth, "", "")) {
+    Serial.println("Firebase SignUp OK");
+    signupOK = true;
+  }
+  
+  configFb.token_status_callback = tokenStatusCallback;
   Firebase.begin(&configFb, &auth);
   Firebase.reconnectWiFi(true);
 
   startCameraServer();
-  Serial.println("SYSTEM READY!");
+  Serial.println("SYSTEM READY - MENUNGGU PERINTAH...");
 }
 
 void loop() {
-  if (Firebase.ready()) {
+  if (Firebase.ready() && signupOK) {
+    // --- HEARTBEAT PING SETIAP 5 DETIK ---
+    if (millis() - lastPingMillis > 5000 || lastPingMillis == 0) {
+      lastPingMillis = millis();
+      Firebase.RTDB.setInt(&fbdo, "/aquafeed/last_ping", millis());
+    }
+
+    // --- BACA BERAT LOADCELL SETIAP 3 DETIK ---
+    if (millis() - lastWeightUpdate > 3000 || lastWeightUpdate == 0) {
+      lastWeightUpdate = millis();
+      if (scale.is_ready()) {
+        float weight = scale.get_units(5); // Rata-rata 5 pembacaan
+        if (weight < 0) weight = 0; // Mencegah nilai negatif jika drift
+        Firebase.RTDB.setFloat(&fbdo, "/aquafeed/current_weight", weight);
+      } else {
+        Serial.println("HX711 tidak terdeteksi.");
+      }
+    }
+
+    // --- BACA PERINTAH ---
     if (Firebase.RTDB.getString(&fbdo, "/aquafeed/command/action")) {
       if (fbdo.dataType() == "string") {
         String action = fbdo.stringData();
