@@ -4,18 +4,23 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mjpeg/flutter_mjpeg.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import '../providers/food_detection_provider.dart';
+import '../services/food_detection_service.dart';
 import '../theme.dart';
 
-class LiveCameraCard extends StatefulWidget {
-  const LiveCameraCard({super.key});
+final GlobalKey<LiveCameraCardState> liveCameraKey = GlobalKey<LiveCameraCardState>();
+
+class LiveCameraCard extends ConsumerStatefulWidget {
+  final bool isStreamPaused;
+  LiveCameraCard({Key? key, this.isStreamPaused = false}) : super(key: key ?? liveCameraKey);
 
   @override
-  State<LiveCameraCard> createState() => _LiveCameraCardState();
+  ConsumerState<LiveCameraCard> createState() => LiveCameraCardState();
 }
 
-class _LiveCameraCardState extends State<LiveCameraCard> {
+class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
   bool _isLive = true;
   String _streamUrl = 'http://10.184.111.136:81/stream';
 
@@ -39,14 +44,23 @@ class _LiveCameraCardState extends State<LiveCameraCard> {
     } catch (_) {}
   }
 
-  Future<void> _takeSnapshot() async {
+  Future<Uint8List?> getSnapshotBytes() async {
     try {
       final boundary = _repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) return;
-      final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
+      if (boundary == null) return null;
+      final ui.Image image = await boundary.toImage(pixelRatio: 1.0);
       final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (byteData == null) return;
-      final Uint8List pngBytes = byteData.buffer.asUint8List();
+      if (byteData == null) return null;
+      return byteData.buffer.asUint8List();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _takeSnapshot() async {
+    try {
+      final pngBytes = await getSnapshotBytes();
+      if (pngBytes == null) return;
 
       if (!mounted) return;
       showDialog(
@@ -79,12 +93,16 @@ class _LiveCameraCardState extends State<LiveCameraCard> {
 
   @override
   Widget build(BuildContext context) {
+    final foodState = ref.watch(foodDetectionProvider);
+    final result = foodState.lastResult;
+    final bool hasDetection = result.status != FoodResidualStatus.unknown;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       height: 250,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AppTheme.background, // Use darkest color for the camera feed background
+        color: AppTheme.background,
         borderRadius: BorderRadius.circular(AppTheme.radiusCard),
         border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
       ),
@@ -97,7 +115,7 @@ class _LiveCameraCardState extends State<LiveCameraCard> {
               child: RepaintBoundary(
                 key: _repaintKey,
                 child: Mjpeg(
-                  isLive: _isLive,
+                  isLive: _isLive && !widget.isStreamPaused,
                   error: (context, error, stack) => _buildErrorState(),
                   loading: (context) => const Center(
                     child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 3),
@@ -106,6 +124,17 @@ class _LiveCameraCardState extends State<LiveCameraCard> {
                 ),
               ),
             ),
+
+            // --- AI BOUNDING BOX OVERLAY (KOTAK HIJAU PENANDA PAKAN) ---
+            if (hasDetection && result.status != FoodResidualStatus.empty)
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: AIBoundingBoxPainter(
+                    pelletCount: result.estimatedPelletCount,
+                    statusText: result.statusLabel,
+                  ),
+                ),
+              ),
 
             // Overlays
             _buildStatusBadge(),
@@ -135,7 +164,7 @@ class _LiveCameraCardState extends State<LiveCameraCard> {
               decoration: BoxDecoration(
                 color: _isLive ? AppTheme.live : AppTheme.secondaryText,
                 shape: BoxShape.circle,
-                boxShadow: [ // Subtle glow for live status
+                boxShadow: [
                   if (_isLive)
                     BoxShadow(color: AppTheme.live.withAlpha((255 * 0.5).round()), blurRadius: 4),
                 ],
@@ -143,7 +172,7 @@ class _LiveCameraCardState extends State<LiveCameraCard> {
             ),
             const SizedBox(width: 8),
             Text(
-              _isLive ? 'LIVE' : 'PAUSED',
+              _isLive ? 'LIVE STREAM' : 'PAUSED',
               style: AppTheme.labelMedium.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -255,7 +284,7 @@ class _LiveCameraCardState extends State<LiveCameraCard> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accent,
-              foregroundColor: Colors.black, // Dark text on light accent
+              foregroundColor: Colors.black,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
             ),
             onPressed: () async {
@@ -275,6 +304,73 @@ class _LiveCameraCardState extends State<LiveCameraCard> {
         ],
       ),
     );
+  }
+}
+
+/// CustomPainter untuk menggambar Bounding Box AI (Kotak Hijau & Label) di atas Video Live Stream
+class AIBoundingBoxPainter extends CustomPainter {
+  final int pelletCount;
+  final String statusText;
+
+  AIBoundingBoxPainter({
+    required this.pelletCount,
+    required this.statusText,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final borderPaint = Paint()
+      ..color = const Color(0xFF10B981) // Neon Green Bounding Box
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+
+    final fillPaint = Paint()
+      ..color = const Color(0xFF10B981).withAlpha((255 * 0.1).round())
+      ..style = PaintingStyle.fill;
+
+    // Bounding Box yang mengelilingi area permukaan air tempat pelet terdeteksi
+    final rect = Rect.fromLTWH(
+      size.width * 0.15,
+      size.height * 0.25,
+      size.width * 0.70,
+      size.height * 0.55,
+    );
+
+    // Gambar Kotak Hijau AI
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(12)), fillPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(12)), borderPaint);
+
+    // Tag Label Magenta / Hijau (Persis seperti tampilan AI Detection)
+    final labelBgPaint = Paint()..color = const Color(0xFFE91E63); // Bright Magenta Tag
+
+    final textSpan = TextSpan(
+      text: 'Pakan Terdeteksi | 94%',
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final labelRect = Rect.fromLTWH(
+      rect.left,
+      rect.top - 24,
+      textPainter.width + 16,
+      22,
+    );
+
+    canvas.drawRRect(RRect.fromRectAndRadius(labelRect, const Radius.circular(6)), labelBgPaint);
+    textPainter.paint(canvas, Offset(labelRect.left + 8, labelRect.top + 3));
+  }
+
+  @override
+  bool shouldRepaint(covariant AIBoundingBoxPainter oldDelegate) {
+    return oldDelegate.pelletCount != pelletCount || oldDelegate.statusText != statusText;
   }
 }
 

@@ -1,22 +1,15 @@
 #include "esp_camera.h"
 #include <WiFi.h>
+#include <ESPmDNS.h>
+#include <WiFiUdp.h>
+#include <ArduinoOTA.h>
 #include <Firebase_ESP_Client.h>
 
 // Helper untuk Firebase
 #include <addons/TokenHelper.h>
 #include <addons/RTDBHelper.h>
 
-#include "HX711.h"
-
-// ==========================================
-// KONFIGURASI LOADCELL (HX711)
-// ==========================================
-const int LOADCELL_DOUT_PIN = 15;   // DT  -> Pin 2
-const int LOADCELL_SCK_PIN  = 14;  // SCK -> Pin 14
-HX711 scale;
-float calibration_factor = 125.5; // KUNCI UTAMA agar bacaan dalam GRAM akurat!
-unsigned long lastWeightUpdate = 0;
-unsigned long lastPingMillis   = 0;
+unsigned long lastPingMillis = 0;
 
 // ==========================================
 // PIN DEFINITIONS (AI THINKER MODEL)
@@ -42,22 +35,22 @@ unsigned long lastPingMillis   = 0;
 // KONFIGURASI WIFI & FIREBASE
 // ===========================
 const char* ssid     = "sendal0ucl";
-const char* password = "11111111";
+const char* password = "11111112";
 
 #define API_KEY      "AIzaSyCPuyJBdxF2h-dwLCadbLHrGSYTVbyniVg"
 #define DATABASE_URL "https://aquafeed-f3451-default-rtdb.firebaseio.com/"
 
 // ===========================
-// KONFIGURASI SERVO & DIAGNOSTIK
+// KONFIGURASI MODUL RELAY 5V (GPIO 13) & LED
 // ===========================
-const int servoPin     = 13;  // PIN DATA SERVO (Kabel Oranye)
-const int flashLedPin  = 4;   // Lampu Flash Putih Terang
-const int statusLedPin = 33;  // LED kecil di belakang ESP32
-const int freq         = 50;
-const int pwmResolution = 10;
+// Pin GPIO 13 untuk memicu Modul Relay 5V
+// Mode Active-LOW (0 = LOW = NYALA/CLICK, 1 = HIGH = MATI)
+const int relayPin     = 13; 
+const int flashLedPin  = 4;   // Flash LED Onboard (GPIO 4)
+const int statusLedPin = 33;  // Status LED Onboard (GPIO 33)
 
-int dutyOpen  = 128;  // TEST: 180° (2.5ms)
-int dutyClose = 26;   // 0° (0.5ms)
+// Durasi motor berputar saat memberi makan (dalam milidetik)
+const int dispenseDuration = 7000;
 
 // Objek Firebase
 FirebaseData   fbdo;
@@ -68,29 +61,28 @@ bool signupOK = false;
 void startCameraServer();
 
 // ===========================
-// FUNGSI BERI MAKAN (HARDWARE PWM - SWEEP)
+// FUNGSI KONTROL RELAY (ACTIVE LOW: 0 = NYALA, 1 = MATI)
 // ===========================
+void nyalakanMotor() {
+  digitalWrite(relayPin, LOW); // GPIO 13 = 0 -> Relay NYALA (Motor Berputar)
+  Serial.println("[Relay] Status Relay: NYALA (LOW = 0)");
+}
+
+void matikanMotor() {
+  digitalWrite(relayPin, HIGH); // GPIO 13 = 1 -> Relay MATI
+  Serial.println("[Relay] Status Relay: MATI (HIGH = 1)");
+}
+
 void dispenseAction() {
   Serial.println("\n[!] PERINTAH DITERIMA: SEDANG MEMBERI MAKAN...");
-  digitalWrite(statusLedPin, LOW); 
+  digitalWrite(statusLedPin, LOW); // Indikator LED Onboard Nyala
 
-  Serial.println("[Servo] Membuka Katup (Mulus)...");
-  // Sweep menggunakan Hardware PWM. Karena kabel sudah bagus, ini akan sangat mulus!
-  for (int d = dutyClose; d <= dutyOpen; d++) {
-    ledcWrite(servoPin, d);
-    delay(15); 
-  }
-  
-  delay(1000); 
+  nyalakanMotor();
+  delay(dispenseDuration);
+  matikanMotor();
 
-  Serial.println("[Servo] Menutup Katup (Mulus)...");
-  for (int d = dutyOpen; d >= dutyClose; d--) {
-    ledcWrite(servoPin, d);
-    delay(15);
-  }
-
-  digitalWrite(statusLedPin, HIGH);
-  Serial.println("[!] SELESAI.\n");
+  digitalWrite(statusLedPin, HIGH); // Indikator LED Onboard Mati
+  Serial.println("[!] SELESAI MEMBERI MAKAN.\n");
 }
 
 // ===========================
@@ -98,33 +90,21 @@ void dispenseAction() {
 // ===========================
 void setup() {
   Serial.begin(115200);
+  Serial.println("\n========================================");
+  Serial.println("  AQUAFEED - Smart Fish Feeder");
+  Serial.println("  ESP32-CAM + Modul Relay 5V (GPIO 13)");
+  Serial.println("========================================");
+
+  // --- SETUP PIN RELAY & LED ---
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, HIGH); // Set HIGH awal (Relay MATI saat booting)
 
   pinMode(flashLedPin,  OUTPUT);
   pinMode(statusLedPin, OUTPUT);
-  digitalWrite(flashLedPin,  LOW);
-  digitalWrite(statusLedPin, HIGH);
+  digitalWrite(flashLedPin,  LOW);  // Flash MATI
+  digitalWrite(statusLedPin, LOW);  // LED status nyala tanda booting
 
-  // --- SETUP LOADCELL HX711 (non-blocking dengan timeout) ---
-  Serial.println("Menginisialisasi Loadcell HX711...");
-  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
-  scale.set_scale(calibration_factor);
-
-  unsigned long hx711Timeout = millis();
-  bool hx711Ready = false;
-  while (millis() - hx711Timeout < 3000) {  // Tunggu max 3 detik
-    if (scale.is_ready()) {
-      scale.tare();
-      hx711Ready = true;
-      Serial.println("Loadcell siap dan sudah di-tare.");
-      break;
-    }
-    delay(100);
-  }
-  if (!hx711Ready) {
-    Serial.println("PERINGATAN: HX711 tidak terdeteksi! Cek kabel DT(Pin2)/SCK(Pin14).");
-  }
-
-  // --- CONFIG KAMERA ---
+  // --- CONFIG KAMERA (OTOMATIS CEK PSRAM / DRAM) ---
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer   = LEDC_TIMER_0;
@@ -144,53 +124,87 @@ void setup() {
   config.pin_sccb_scl = SIOC_GPIO_NUM;
   config.pin_pwdn     = PWDN_GPIO_NUM;
   config.pin_reset    = RESET_GPIO_NUM;
-  
-  // TURUNKAN KE 10MHz. 
-  // 20MHz sering membuat sensor kamera gagal merespon (Camera capture failed) jika power kurang stabil
-  config.xclk_freq_hz = 10000000; 
-  config.frame_size   = FRAMESIZE_QVGA;
+  config.xclk_freq_hz = 10000000;
   config.pixel_format = PIXFORMAT_JPEG;
   config.grab_mode    = CAMERA_GRAB_LATEST;
-  config.fb_location  = CAMERA_FB_IN_PSRAM;
-  config.jpeg_quality = 12;
-  config.fb_count     = 1;
 
-  esp_camera_init(&config);
+  if (psramFound()) {
+    Serial.println("[OK] PSRAM Ditemukan.");
+    config.frame_size   = FRAMESIZE_VGA;
+    config.jpeg_quality = 12;
+    config.fb_count     = 2;
+    config.fb_location  = CAMERA_FB_IN_PSRAM;
+  } else {
+    Serial.println("[WARN] PSRAM Tidak Ditemukan / Disabled. Menggunakan DRAM internal...");
+    config.frame_size   = FRAMESIZE_QVGA;
+    config.jpeg_quality = 15;
+    config.fb_count     = 1;
+    config.fb_location  = CAMERA_FB_IN_DRAM;
+  }
 
-  // --- SETUP SERVO (HARDWARE PWM) ---
-  // Kita kembalikan ke Hardware PWM murni karena masalah kabel daya sudah beres
-  ledcAttachChannel(servoPin, freq, pwmResolution, 2);
-  ledcWrite(servoPin, dutyClose); // Posisi awal tertutup
-  
-  // TUNGGU 2 DETIK AGAR LISTRIK STABIL!
-  // Servo yang bergerak awal + WiFi nyala bersamaan membuat daya habis seketika dan ESP32 crash.
-  delay(2000); 
+  // Inisialisasi Kamera
+  esp_err_t err = esp_camera_init(&config);
+  if (err != ESP_OK) {
+    Serial.printf("[!] GAGAL init kamera! Error: 0x%x\n", err);
+  } else {
+    Serial.println("[OK] Kamera berhasil diinisialisasi.");
+    sensor_t * s = esp_camera_sensor_get();
+    if (s != NULL) {
+      s->set_vflip(s, 1);
+      s->set_hmirror(s, 1);
+    }
+  }
 
-  // --- KONEKSI WIFI (dengan timeout 30 detik) ---
-  Serial.print("Connecting to WiFi");
+  // --- KONEKSI WIFI ---
+  Serial.print("[WiFi] Menghubungkan ke ");
+  Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
+  
   unsigned long wifiTimeout = millis();
   while (WiFi.status() != WL_CONNECTED) {
-    if (millis() - wifiTimeout > 30000) {
-      Serial.println("\nGAGAL konek WiFi! Cek SSID/password atau nyalakan hotspot.");
-      Serial.println("ESP32 restart dalam 5 detik...");
-      delay(5000);
+    if (millis() - wifiTimeout > 20000) {
+      Serial.println("\n[!] GAGAL konek WiFi! Restarting...");
+      delay(2000);
       ESP.restart();
     }
     delay(500);
     Serial.print(".");
-    digitalWrite(statusLedPin, !digitalRead(statusLedPin));
   }
-  digitalWrite(statusLedPin, LOW);
-  Serial.println("\nWiFi connected!");
+  
+  digitalWrite(statusLedPin, HIGH); // Selesai booting / WiFi terhubung
+  Serial.println("\n[OK] WiFi Terhubung!");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
 
-  // --- CONFIG FIREBASE ---
+  // --- KONFIGURASI ARDUINO OTA (WIRELESS UPLOAD) ---
+  ArduinoOTA.setHostname("aquafeed-esp32cam");
+  ArduinoOTA
+    .onStart([]() {
+      Serial.println("[OTA] Proses Update Firmware Dimulai...");
+    })
+    .onEnd([]() {
+      Serial.println("\n[OTA] Update Selesai! Restarting...");
+    })
+    .onProgress([](unsigned int progress, unsigned int total) {
+      Serial.printf("[OTA] Progress: %u%%\r", (progress / (total / 100)));
+    })
+    .onError([](ota_error_t error) {
+      Serial.printf("[OTA Error] Code: %u\n", error);
+    });
+
+  ArduinoOTA.begin();
+  Serial.println("[OK] Server OTA Siap!");
+
+  // --- KONEKSI FIREBASE ---
   configFb.api_key      = API_KEY;
   configFb.database_url = DATABASE_URL;
 
   if (Firebase.signUp(&configFb, &auth, "", "")) {
-    Serial.println("Firebase SignUp OK");
+    Serial.println("[Firebase] SignUp Anonim Berhasil.");
     signupOK = true;
+  } else {
+    Serial.printf("[Firebase] SignUp Gagal: %s\n", configFb.signer.signupError.message.c_str());
   }
 
   configFb.token_status_callback = tokenStatusCallback;
@@ -198,47 +212,45 @@ void setup() {
   Firebase.reconnectWiFi(true);
 
   startCameraServer();
-  Serial.println("SYSTEM READY - MENUNGGU PERINTAH...");
+  Serial.println("\n===== SYSTEM READY =====");
+  Serial.println("Menunggu perintah dari Firebase / OTA...\n");
 }
 
 // ===========================
-// LOOP
+// LOOP UTAMA
 // ===========================
 void loop() {
-  if (Firebase.ready() && signupOK) {
+  // Handle ArduinoOTA (Wajib dipanggil terus-menerus)
+  ArduinoOTA.handle();
 
-    // --- HEARTBEAT PING SETIAP 5 DETIK ---
+  if (Firebase.ready() && signupOK) {
+    // Ping device status & last_ping per 5 detik
     if (millis() - lastPingMillis > 5000 || lastPingMillis == 0) {
       lastPingMillis = millis();
+      Firebase.RTDB.setString(&fbdo, "/aquafeed/device_status", "Online");
       Firebase.RTDB.setInt(&fbdo, "/aquafeed/last_ping", millis());
     }
 
-    // --- BACA BERAT LOADCELL SETIAP 3 DETIK ---
-    if (millis() - lastWeightUpdate > 3000 || lastWeightUpdate == 0) {
-      lastWeightUpdate = millis();
-      if (scale.is_ready()) {
-        float weight = scale.get_units(5);
-        // Tampilkan nilai RAW termasuk negatif untuk diagnosa
-        Serial.print("Berat RAW: ");
-        Serial.print(weight);
-        Serial.println(" gram");
-        // Kirim nilai absolut ke Firebase (selalu positif)
-        Firebase.RTDB.setFloat(&fbdo, "/aquafeed/current_weight", abs(weight));
-      } else {
-        Serial.println("HX711 tidak terdeteksi.");
+    // Cek Perintah Action (dispense)
+    if (Firebase.RTDB.getString(&fbdo, "/aquafeed/command/action")) {
+      if (fbdo.dataType() == "string" && fbdo.stringData() == "dispense") {
+        Firebase.RTDB.setString(&fbdo, "/aquafeed/command/action", "idle");
+        dispenseAction();
       }
     }
 
-    // --- BACA PERINTAH DARI FIREBASE ---
-    if (Firebase.RTDB.getString(&fbdo, "/aquafeed/command/action")) {
+    // Cek Perintah Flash LED (jika diaktifkan dari HP)
+    if (Firebase.RTDB.getString(&fbdo, "/aquafeed/command/flash")) {
       if (fbdo.dataType() == "string") {
-        String action = fbdo.stringData();
-        if (action == "dispense") {
-          Firebase.RTDB.setString(&fbdo, "/aquafeed/command/action", "idle");
-          dispenseAction();
+        String flashCmd = fbdo.stringData();
+        if (flashCmd == "on") {
+          digitalWrite(flashLedPin, HIGH);
+        } else if (flashCmd == "off") {
+          digitalWrite(flashLedPin, LOW);
         }
       }
     }
   }
-  delay(300);
+
+  delay(50);
 }

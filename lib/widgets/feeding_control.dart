@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vibration/vibration.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../providers/feed_provider.dart';
 import '../providers/log_provider.dart';
 import '../providers/device_provider.dart';
@@ -96,39 +98,62 @@ class FeedingControlPanel extends ConsumerWidget {
             onPressed: () async {
               final dosage = feedState.dosage;
               if (dosage <= 0) {
-                _showError(context, 'Dosis harus lebih dari 0g');
+                Fluttertoast.showToast(
+                  msg: 'Dosis harus lebih dari 0g',
+                  backgroundColor: AppTheme.error,
+                  textColor: Colors.white,
+                );
                 return;
               }
 
-              // Jika demo mode, pake dispensing lokal
-              if (isDemoMode) {
-                feedNotifier.dispenseFeedLocal();
-              } else {
-                await feedNotifier.dispenseFeed();
+              // Haptic feedback
+              final hasVibrator = await Vibration.hasVibrator() ?? false;
+              if (hasVibrator) {
+                await Vibration.vibrate(duration: 50);
               }
-              
-              final now = DateTime.now();
-              final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-              final logTitle = isDemoMode 
-                  ? 'Pakan ${dosage}g (DEMO)' 
-                  : 'Pakan ${dosage}g diberikan';
-              
-              await ref.read(logProvider.notifier).addLog(
-                ActivityLog(
-                  title: logTitle,
-                  time: timeStr,
-                  type: LogType.success,
-                  status: isDemoMode ? 'Demo' : 'Selesai',
-                  dosage: dosage,
-                  timestamp: now,
-                ),
-              );
 
-              if (context.mounted) {
-                final msg = isDemoMode
-                    ? 'DEMO: ${dosage}g pakan (tidak terkirim ke alat)'
-                    : 'Memberikan ${dosage}g pakan...';
-                _showSuccess(context, msg);
+              try {
+                // Jika demo mode, pake dispensing lokal
+                if (isDemoMode) {
+                  feedNotifier.dispenseFeedLocal();
+                } else {
+                  await feedNotifier.dispenseFeed();
+                }
+
+                final now = DateTime.now();
+                final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+                final logTitle = isDemoMode
+                    ? 'Pakan ${dosage}g (DEMO)'
+                    : 'Pakan ${dosage}g diberikan';
+
+                await ref.read(logProvider.notifier).addLog(
+                  ActivityLog(
+                    title: logTitle,
+                    time: timeStr,
+                    type: LogType.success,
+                    status: isDemoMode ? 'Demo' : 'Selesai',
+                    dosage: dosage,
+                    timestamp: now,
+                  ),
+                );
+
+                if (context.mounted) {
+                  Fluttertoast.showToast(
+                    msg: isDemoMode
+                        ? 'DEMO: ${dosage}g pakan (tidak terkirim ke alat)'
+                        : 'Berhasil memberikan ${dosage}g pakan',
+                    backgroundColor: AppTheme.statusOnline,
+                    textColor: Colors.black,
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Fluttertoast.showToast(
+                    msg: 'Gagal memberi pakan: $e',
+                    backgroundColor: AppTheme.error,
+                    textColor: Colors.white,
+                  );
+                }
               }
             },
           ),
@@ -137,28 +162,7 @@ class FeedingControlPanel extends ConsumerWidget {
     );
   }
 
-  void _showError(BuildContext context, String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: AppTheme.error,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
-      ),
-    );
   }
-
-  void _showSuccess(BuildContext context, String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: AppTheme.statusOnline,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
-      ),
-    );
-  }
-}
 
 class _DosageDisplay extends StatelessWidget {
   final int dosage;
