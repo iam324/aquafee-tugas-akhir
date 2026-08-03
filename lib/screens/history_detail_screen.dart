@@ -16,14 +16,45 @@ class HistoryDetailScreen extends ConsumerWidget {
     final groupedLogs = _groupLogsByDate(logs);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.colors.background,
       appBar: AppBar(
-        backgroundColor: AppTheme.background,
+        backgroundColor: AppTheme.colors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: _BackBtn(onTap: () => Navigator.of(context).pop()),
-        title: Text('Activity History', style: AppTheme.headlineMedium),
+        title: Text('Activity History', style: AppTheme.colors.headlineMedium),
         centerTitle: true,
+        actions: [
+          if (logs.isNotEmpty)
+            IconButton(
+              icon: Icon(Icons.delete_sweep_rounded, color: AppTheme.colors.error),
+              tooltip: 'Hapus Semua Histori',
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: AppTheme.colors.background,
+                    title: Text('Hapus Semua', style: AppTheme.colors.titleMedium.copyWith(color: AppTheme.colors.error)),
+                    content: Text('Apakah Anda yakin ingin menghapus seluruh histori aktivitas?', style: AppTheme.colors.bodySmall),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text('Batal', style: AppTheme.colors.bodySmall),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          ref.read(logProvider.notifier).clearAllLogs();
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.colors.error),
+                        child: Text('Hapus', style: AppTheme.colors.labelLarge.copyWith(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -84,17 +115,17 @@ class HistoryDetailScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.error.withAlpha((255 * 0.05).round()),
-        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-        border: Border.all(color: AppTheme.error.withAlpha((255 * 0.1).round())),
+        color: AppTheme.colors.error.withAlpha((255 * 0.05).round()),
+        borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
+        border: Border.all(color: AppTheme.colors.error.withAlpha((255 * 0.1).round())),
       ),
       child: Column(
         children: [
-          const Icon(Icons.error_outline_rounded, color: AppTheme.error, size: 32),
+          Icon(Icons.error_outline_rounded, color: AppTheme.colors.error, size: 32),
           const SizedBox(height: 16),
-          Text('Terjadi Kesalahan', style: AppTheme.titleLarge),
+          Text('Terjadi Kesalahan', style: AppTheme.colors.titleLarge),
           const SizedBox(height: 8),
-          Text(error, style: AppTheme.bodySmall, textAlign: TextAlign.center),
+          Text(error, style: AppTheme.colors.bodySmall, textAlign: TextAlign.center),
         ],
       ),
     );
@@ -106,13 +137,13 @@ class HistoryDetailScreen extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const SizedBox(height: 80),
-          Icon(Icons.history_toggle_off_outlined, size: 64, color: AppTheme.secondaryText.withAlpha((255 * 0.2).round())),
+          Icon(Icons.history_toggle_off_outlined, size: 64, color: AppTheme.colors.secondaryText.withAlpha((255 * 0.2).round())),
           const SizedBox(height: 24),
-          Text('No History Found', style: AppTheme.headlineMedium.copyWith(color: AppTheme.secondaryText)),
+          Text('No History Found', style: AppTheme.colors.headlineMedium.copyWith(color: AppTheme.colors.secondaryText)),
           const SizedBox(height: 8),
           Text(
             'Activities will appear here once you start feeding.',
-            style: AppTheme.bodySmall,
+            style: AppTheme.colors.bodySmall,
             textAlign: TextAlign.center,
           ),
         ],
@@ -167,7 +198,7 @@ class HistoryDetailScreen extends ConsumerWidget {
             children: [
               Text(
                 dateKey.toUpperCase(),
-                style: AppTheme.titleSmall,
+                style: AppTheme.colors.titleSmall,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -194,12 +225,12 @@ class HistoryDetailScreen extends ConsumerWidget {
               direction: DismissDirection.endToStart,
               background: Container(
                 decoration: BoxDecoration(
-                  color: AppTheme.error.withAlpha((255 * 0.2).round()),
-                  borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                  color: AppTheme.colors.error.withAlpha((255 * 0.2).round()),
+                  borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
                 ),
                 alignment: Alignment.centerRight,
                 padding: const EdgeInsets.only(right: 20),
-                child: const Icon(Icons.delete_outline_rounded, color: AppTheme.error),
+                child: Icon(Icons.delete_outline_rounded, color: AppTheme.colors.error),
               ),
               onDismissed: (_) {
                 if (log.id != null) ref.read(logProvider.notifier).deleteLog(log.id!);
@@ -207,8 +238,8 @@ class HistoryDetailScreen extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                  color: AppTheme.colors.surface,
+                  borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
                   border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
                 ),
                 child: Row(
@@ -217,12 +248,12 @@ class HistoryDetailScreen extends ConsumerWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: (isSuccess ? AppTheme.statusOnline : AppTheme.warning).withAlpha((255 * 0.1).round()),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                        color: (isSuccess ? AppTheme.colors.statusOnline : AppTheme.colors.warning).withAlpha((255 * 0.1).round()),
+                        borderRadius: BorderRadius.circular(AppTheme.colors.radiusButton),
                       ),
                       child: Icon(
                         isSuccess ? Icons.check_circle_outline_rounded : Icons.priority_high_rounded,
-                        color: isSuccess ? AppTheme.statusOnline : AppTheme.warning,
+                        color: isSuccess ? AppTheme.colors.statusOnline : AppTheme.colors.warning,
                         size: 20,
                       ),
                     ),
@@ -231,22 +262,22 @@ class HistoryDetailScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(log.title, style: AppTheme.titleMedium),
+                          Text(log.title, style: AppTheme.colors.titleMedium),
                           const SizedBox(height: 4),
-                          Text(timeFormatted, style: AppTheme.bodySmall),
+                          Text(timeFormatted, style: AppTheme.colors.bodySmall),
                         ],
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: AppTheme.surfaceLight,
-                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                        color: AppTheme.colors.surfaceLight,
+                        borderRadius: BorderRadius.circular(AppTheme.colors.radiusPill),
                       ),
                       child: Text(
                         log.status,
-                        style: AppTheme.labelMedium.copyWith(
-                          color: isSuccess ? AppTheme.statusOnline : AppTheme.warning,
+                        style: AppTheme.colors.labelMedium.copyWith(
+                          color: isSuccess ? AppTheme.colors.statusOnline : AppTheme.colors.warning,
                           fontWeight: FontWeight.bold,
                           fontSize: 10,
                         ),
@@ -275,10 +306,10 @@ class _BackBtn extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceLight,
-          borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+          color: AppTheme.colors.surfaceLight,
+          borderRadius: BorderRadius.circular(AppTheme.colors.radiusButton),
         ),
-        child: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.primaryText, size: 18),
+        child: Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.colors.primaryText, size: 18),
       ),
     );
   }
@@ -292,8 +323,8 @@ class _SkeletonItem extends StatelessWidget {
       child: Container(
         height: 70,
         decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+          color: AppTheme.colors.surface,
+          borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
         ),
       ),
     );

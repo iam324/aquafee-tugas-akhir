@@ -6,11 +6,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_mjpeg/flutter_mjpeg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../providers/food_detection_provider.dart';
-import '../services/food_detection_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 import '../theme.dart';
+import 'glass_card.dart';
 
 final GlobalKey<LiveCameraCardState> liveCameraKey = GlobalKey<LiveCameraCardState>();
+
+/// Provider untuk stream URL (shared antara main card dan floating player)
+final streamUrlProvider = StateProvider<String>((ref) => 'http://10.184.111.136:81/stream');
 
 class LiveCameraCard extends ConsumerStatefulWidget {
   final bool isStreamPaused;
@@ -23,6 +27,7 @@ class LiveCameraCard extends ConsumerStatefulWidget {
 class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
   bool _isLive = true;
   String _streamUrl = 'http://10.184.111.136:81/stream';
+  StreamSubscription? _firebaseUrlSub;
 
   final GlobalKey _repaintKey = GlobalKey();
 
@@ -30,6 +35,7 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
   void initState() {
     super.initState();
     _loadSavedUrl();
+    _listenFirebaseUrl();
   }
 
   Future<void> _loadSavedUrl() async {
@@ -37,10 +43,43 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString('esp32_stream_url');
       if (saved != null && saved.isNotEmpty) {
-        setState(() {
-          _streamUrl = saved;
-        });
+        setState(() => _streamUrl = saved);
+        ref.read(streamUrlProvider.notifier).state = saved;
       }
+    } catch (_) {}
+  }
+
+  /// Dengarkan perubahan stream_url dari Firebase (Auto-IP)
+  void _listenFirebaseUrl() {
+    try {
+      final db = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL: 'https://aquafeed-f3451-default-rtdb.firebaseio.com/',
+      ).ref('aquafeed/stream_url');
+
+      _firebaseUrlSub = db.onValue.listen((event) async {
+        final value = event.snapshot.value;
+        if (value != null && value.toString().isNotEmpty) {
+          final newUrl = value.toString();
+          if (newUrl != _streamUrl) {
+            // Simpan ke SharedPreferences
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('esp32_stream_url', newUrl);
+
+            if (mounted) {
+              setState(() {
+                _streamUrl = newUrl;
+                // Restart stream dengan URL baru
+                _isLive = false;
+              });
+              ref.read(streamUrlProvider.notifier).state = newUrl;
+              Future.delayed(const Duration(milliseconds: 300), () {
+                if (mounted) setState(() => _isLive = true);
+              });
+            }
+          }
+        }
+      });
     } catch (_) {}
   }
 
@@ -57,88 +96,74 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
     }
   }
 
-  Future<void> _takeSnapshot() async {
-    try {
-      final pngBytes = await getSnapshotBytes();
-      if (pngBytes == null) return;
+  void refreshStream() {
+    setState(() => _isLive = false);
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _isLive = true);
+    });
+  }
 
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (context) => Dialog(
-          backgroundColor: AppTheme.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusCard)),
-                child: Image.memory(pngBytes),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text('Close Snapshot', style: AppTheme.labelLarge.copyWith(color: AppTheme.accent)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    } catch (e) {
-      // ignore
-    }
+  @override
+  void dispose() {
+    _firebaseUrlSub?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final foodState = ref.watch(foodDetectionProvider);
-    final result = foodState.lastResult;
-    final bool hasDetection = result.status != FoodResidualStatus.unknown;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      height: 250,
+    return GlassCard(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      height: 240,
       width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppTheme.background,
-        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-        border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
-      ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        borderRadius: BorderRadius.circular(16),
         child: Stack(
           children: [
             // MJPEG Stream Viewer
             Center(
               child: RepaintBoundary(
                 key: _repaintKey,
-                child: Mjpeg(
-                  isLive: _isLive && !widget.isStreamPaused,
-                  error: (context, error, stack) => _buildErrorState(),
-                  loading: (context) => const Center(
-                    child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 3),
-                  ),
-                  stream: _streamUrl,
-                ),
+                child: widget.isStreamPaused
+                    ? Container(
+                        color: AppTheme.colors.surface,
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.picture_in_picture_alt_rounded,
+                                  color: AppTheme.colors.accent.withAlpha((255 * 0.5).round()), size: 32),
+                              const SizedBox(height: 8),
+                              Text('Sedang tampil di mini player',
+                                  style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.secondaryText)),
+                            ],
+                          ),
+                        ),
+                      )
+                    : Mjpeg(
+                        isLive: _isLive,
+                        error: (context, error, stack) => _buildErrorState(),
+                        loading: (context) => Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(color: AppTheme.colors.accent, strokeWidth: 3),
+                              const SizedBox(height: 12),
+                              Text('Menghubungkan ke kamera...',
+                                  style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.secondaryText)),
+                            ],
+                          ),
+                        ),
+                        stream: _streamUrl,
+                        timeout: const Duration(seconds: 5),
+                      ),
               ),
             ),
 
-            // --- AI BOUNDING BOX OVERLAY (KOTAK HIJAU PENANDA PAKAN) ---
-            if (_isLive && !widget.isStreamPaused && hasDetection && result.status != FoodResidualStatus.empty)
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: AIBoundingBoxPainter(
-                    pelletCount: result.estimatedPelletCount,
-                    statusText: result.statusLabel,
-                  ),
-                ),
-              ),
-
             // Overlays
-            _buildStatusBadge(),
-            _buildControls(),
+            if (!widget.isStreamPaused) ...[
+              _buildStatusBadge(),
+              _buildControls(),
+            ],
           ],
         ),
       ),
@@ -147,13 +172,13 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
 
   Widget _buildStatusBadge() {
     return Positioned(
-      top: 16,
-      left: 16,
+      top: 12,
+      left: 12,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: Colors.black.withAlpha((255 * 0.5).round()),
-          borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+          color: Colors.black.withAlpha((255 * 0.55).round()),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -162,18 +187,18 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
               width: 6,
               height: 6,
               decoration: BoxDecoration(
-                color: _isLive ? AppTheme.live : AppTheme.secondaryText,
+                color: _isLive ? AppTheme.colors.live : AppTheme.colors.secondaryText,
                 shape: BoxShape.circle,
                 boxShadow: [
                   if (_isLive)
-                    BoxShadow(color: AppTheme.live.withAlpha((255 * 0.5).round()), blurRadius: 4),
+                    BoxShadow(color: AppTheme.colors.live.withAlpha((255 * 0.5).round()), blurRadius: 4),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Text(
-              _isLive ? 'LIVE STREAM' : 'PAUSED',
-              style: AppTheme.labelMedium.copyWith(
+              _isLive ? 'LIVE' : 'PAUSED',
+              style: AppTheme.colors.labelMedium.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 10,
@@ -187,8 +212,8 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
 
   Widget _buildControls() {
     return Positioned(
-      top: 16,
-      right: 16,
+      top: 12,
+      right: 12,
       child: Row(
         children: [
           _ControlButton(
@@ -198,12 +223,7 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
           const SizedBox(width: 8),
           _ControlButton(
             icon: Icons.refresh_rounded,
-            onTap: () {
-              setState(() => _isLive = false);
-              Future.delayed(const Duration(milliseconds: 200), () {
-                if (mounted) setState(() => _isLive = true);
-              });
-            },
+            onTap: refreshStream,
           ),
         ],
       ),
@@ -212,33 +232,27 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
 
   Widget _buildErrorState() {
     return Container(
-      color: AppTheme.background,
+      color: AppTheme.colors.background,
       padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.videocam_off_outlined, color: AppTheme.secondaryText.withAlpha((255 * 0.3).round()), size: 40),
-          const SizedBox(height: 16),
-          Text(
-            'Kamera Terputus',
-            style: AppTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
+          Icon(Icons.videocam_off_outlined, color: AppTheme.colors.secondaryText.withAlpha((255 * 0.3).round()), size: 36),
+          const SizedBox(height: 12),
+          Text('Kamera Terputus', style: AppTheme.colors.titleMedium),
+          const SizedBox(height: 6),
           Text(
             'Pastikan ESP32 terhubung ke Wi-Fi yang sama',
-            style: AppTheme.bodySmall,
+            style: AppTheme.colors.bodySmall,
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _ActionTextButton(
-                label: 'Retry',
-                onTap: () {
-                  setState(() => _isLive = false);
-                  Future.delayed(const Duration(milliseconds: 200), () => setState(() => _isLive = true));
-                },
+                label: 'Refresh',
+                onTap: refreshStream,
               ),
               const SizedBox(width: 12),
               _ActionTextButton(
@@ -257,23 +271,26 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceLight,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusCard)),
-        title: Text('Stream Configuration', style: AppTheme.titleLarge),
+        backgroundColor: AppTheme.colors.surfaceLight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Stream Configuration', style: AppTheme.colors.titleLarge),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('ESP32 Stream URL', style: AppTheme.bodySmall),
+            Text('ESP32 Stream URL', style: AppTheme.colors.bodySmall),
+            const SizedBox(height: 4),
+            Text('IP akan otomatis update dari ESP32',
+                style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.accent, fontSize: 11)),
             const SizedBox(height: 8),
             TextField(
               controller: controller,
-              style: AppTheme.bodyMedium,
+              style: AppTheme.colors.bodyMedium,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: AppTheme.surface,
+                fillColor: AppTheme.colors.surface,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                  borderRadius: BorderRadius.circular(AppTheme.colors.radiusInput),
                   borderSide: BorderSide.none,
                 ),
                 hintText: 'http://192.168.1.x:81/stream',
@@ -284,13 +301,13 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel', style: AppTheme.labelLarge.copyWith(color: AppTheme.secondaryText)),
+            child: Text('Cancel', style: AppTheme.colors.labelLarge.copyWith(color: AppTheme.colors.secondaryText)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accent,
+              backgroundColor: AppTheme.colors.accent,
               foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.colors.radiusButton)),
             ),
             onPressed: () async {
               final newUrl = controller.text.trim();
@@ -301,81 +318,15 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
                 _streamUrl = newUrl;
                 _isLive = false;
               });
+              ref.read(streamUrlProvider.notifier).state = newUrl;
               Navigator.of(context).pop();
-              Future.delayed(const Duration(milliseconds: 200), () => setState(() => _isLive = true));
+              Future.delayed(const Duration(milliseconds: 300), () => setState(() => _isLive = true));
             },
             child: const Text('Save & Retry'),
           ),
         ],
       ),
     );
-  }
-}
-
-/// CustomPainter untuk menggambar Bounding Box AI (Kotak Hijau & Label) di atas Video Live Stream
-class AIBoundingBoxPainter extends CustomPainter {
-  final int pelletCount;
-  final String statusText;
-
-  AIBoundingBoxPainter({
-    required this.pelletCount,
-    required this.statusText,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final borderPaint = Paint()
-      ..color = const Color(0xFF10B981) // Neon Green Bounding Box
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0;
-
-    final fillPaint = Paint()
-      ..color = const Color(0xFF10B981).withAlpha((255 * 0.1).round())
-      ..style = PaintingStyle.fill;
-
-    // Bounding Box yang mengelilingi area permukaan air tempat pelet terdeteksi
-    final rect = Rect.fromLTWH(
-      size.width * 0.15,
-      size.height * 0.25,
-      size.width * 0.70,
-      size.height * 0.55,
-    );
-
-    // Gambar Kotak Hijau AI
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(12)), fillPaint);
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(12)), borderPaint);
-
-    // Tag Label Magenta / Hijau (Persis seperti tampilan AI Detection)
-    final labelBgPaint = Paint()..color = const Color(0xFFE91E63); // Bright Magenta Tag
-
-    final textSpan = TextSpan(
-      text: 'Pakan Terdeteksi | 94%',
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 11,
-        fontWeight: FontWeight.bold,
-      ),
-    );
-
-    final textPainter = TextPainter(
-      text: textSpan,
-      textDirection: TextDirection.ltr,
-    )..layout();
-
-    final labelRect = Rect.fromLTWH(
-      rect.left,
-      rect.top - 24,
-      textPainter.width + 16,
-      22,
-    );
-
-    canvas.drawRRect(RRect.fromRectAndRadius(labelRect, const Radius.circular(6)), labelBgPaint);
-    textPainter.paint(canvas, Offset(labelRect.left + 8, labelRect.top + 3));
-  }
-
-  @override
-  bool shouldRepaint(covariant AIBoundingBoxPainter oldDelegate) {
-    return oldDelegate.pelletCount != pelletCount || oldDelegate.statusText != statusText;
   }
 }
 
@@ -389,13 +340,13 @@ class _ControlButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 40,
-        height: 40,
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
           color: Colors.black.withAlpha((255 * 0.5).round()),
-          borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+          borderRadius: BorderRadius.circular(18),
         ),
-        child: Icon(icon, color: Colors.white, size: 20),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }
@@ -411,13 +362,13 @@ class _ActionTextButton extends StatelessWidget {
     return TextButton(
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        backgroundColor: AppTheme.surfaceLight,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+        backgroundColor: AppTheme.colors.surfaceLight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.colors.radiusPill)),
       ),
       onPressed: onTap,
       child: Text(
         label,
-        style: AppTheme.labelMedium.copyWith(color: AppTheme.primaryText),
+        style: AppTheme.colors.labelMedium.copyWith(color: AppTheme.colors.primaryText),
       ),
     );
   }

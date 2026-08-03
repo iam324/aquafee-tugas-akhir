@@ -25,7 +25,7 @@ class StatusCardsSection extends ConsumerWidget {
                   unit: 'gram',
                   icon: Icons.monitor_weight_outlined,
                   footer: 'Data Loadcell',
-                  color: AppTheme.surfaceLight, // Lighter card for layering
+                  color: AppTheme.colors.surfaceLight, // Lighter card for layering
                 ),
               ),
               const SizedBox(width: 12),
@@ -38,7 +38,7 @@ class StatusCardsSection extends ConsumerWidget {
                   footer: '${feedState.maxCapacity.toInt()}g',
                   progress: feedState.currentStock / feedState.maxCapacity,
                   isWarning: (feedState.maxCapacity > 0) ? (feedState.currentStock / feedState.maxCapacity) < 0.1 : false,
-                  color: AppTheme.surfaceLight, // Lighter card for layering
+                  color: AppTheme.colors.surfaceLight, // Lighter card for layering
                 ),
               ),
             ],
@@ -57,7 +57,7 @@ class StatusCardsSection extends ConsumerWidget {
                     'Katup: ${deviceState.isFirebaseConnected ? deviceState.valveStatus : '-'}',
                     'Servo: ${deviceState.isFirebaseConnected ? deviceState.servoStatus : '-'}',
                   ],
-                  color: AppTheme.surface, // Darker card for layering
+                  color: AppTheme.colors.surface, // Darker card for layering
                 ),
               ),
             ],
@@ -101,7 +101,7 @@ class _StatusCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
         border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
       ),
       child: Column(
@@ -110,8 +110,8 @@ class _StatusCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: AppTheme.titleSmall),
-              Icon(icon, size: 18, color: AppTheme.secondaryText.withAlpha((255 * 0.6).round())),
+              Text(title, style: AppTheme.colors.titleSmall),
+              Icon(icon, size: 18, color: AppTheme.colors.secondaryText.withAlpha((255 * 0.6).round())),
             ],
           ),
           const SizedBox(height: 16),
@@ -122,15 +122,15 @@ class _StatusCard extends StatelessWidget {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: isOffline ? AppTheme.error : AppTheme.statusOnline,
+                    color: isOffline ? AppTheme.colors.error : AppTheme.colors.statusOnline,
                     shape: BoxShape.circle,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   isOffline ? 'Offline' : value,
-                  style: AppTheme.headlineMedium.copyWith(
-                    color: isOffline ? AppTheme.error : AppTheme.statusOnline, 
+                  style: AppTheme.colors.headlineMedium.copyWith(
+                    color: isOffline ? AppTheme.colors.error : AppTheme.colors.statusOnline, 
                     fontSize: 16
                   ),
                 ),
@@ -140,25 +140,25 @@ class _StatusCard extends StatelessWidget {
             if (statusItems != null)
               ...statusItems!.map((item) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Text(item, style: AppTheme.bodySmall.copyWith(
+                child: Text(item, style: AppTheme.colors.bodySmall.copyWith(
                   fontSize: 11,
-                  color: isOffline ? AppTheme.secondaryText.withAlpha((255 * 0.5).round()) : AppTheme.secondaryText,
+                  color: isOffline ? AppTheme.colors.secondaryText.withAlpha((255 * 0.5).round()) : AppTheme.colors.secondaryText,
                 )),
               )),
           ] else ...[
             RichText(
               text: TextSpan(
-                style: AppTheme.bodyLarge.copyWith(color: AppTheme.primaryText),
+                style: AppTheme.colors.bodyLarge.copyWith(color: AppTheme.colors.primaryText),
                 children: [
                   TextSpan(
                     text: value,
-                    style: AppTheme.displaySmall.copyWith(fontWeight: FontWeight.w600)
+                    style: AppTheme.colors.displaySmall.copyWith(fontWeight: FontWeight.w600)
                   ),
                   const TextSpan(text: ' '),
                   TextSpan(
                     text: unit,
-                    style: AppTheme.bodyMedium.copyWith(
-                      color: AppTheme.secondaryText, 
+                    style: AppTheme.colors.bodyMedium.copyWith(
+                      color: AppTheme.colors.secondaryText, 
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -168,18 +168,18 @@ class _StatusCard extends StatelessWidget {
             const SizedBox(height: 16),
             if (progress != null) ...[
               ClipRRect(
-                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                borderRadius: BorderRadius.circular(AppTheme.colors.radiusPill),
                 child: LinearProgressIndicator(
                   value: progress,
-                  backgroundColor: AppTheme.background,
-                  valueColor: AlwaysStoppedAnimation<Color>(isWarning ? AppTheme.error : AppTheme.accent),
+                  backgroundColor: AppTheme.colors.background,
+                  valueColor: AlwaysStoppedAnimation<Color>(isWarning ? AppTheme.colors.error : AppTheme.colors.accent),
                   minHeight: 5,
                 ),
               ),
               const SizedBox(height: 8),
             ],
             if (footer != null)
-              Text(footer!, style: AppTheme.bodySmall.copyWith(fontSize: 10)),
+              Text(footer!, style: AppTheme.colors.bodySmall.copyWith(fontSize: 10)),
           ],
         ],
       ),

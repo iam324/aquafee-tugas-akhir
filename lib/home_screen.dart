@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_mjpeg/flutter_mjpeg.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:async';
 import 'widgets/custom_header.dart';
 import 'widgets/live_camera_card.dart';
-import 'widgets/food_residual_card.dart';
 import 'widgets/feeding_control.dart';
 import 'widgets/schedule_card.dart';
 import 'widgets/activity_log.dart';
-import 'providers/food_detection_provider.dart';
 import 'providers/log_provider.dart';
 import 'theme.dart';
 
@@ -25,8 +22,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showFloatingCamera = false;
   bool _isMiniPlayerClosed = false;
-  String _streamUrl = 'http://10.184.111.136:81/stream';
-  
+
   double _pipX = 16.0;
   double _pipY = 24.0;
   Timer? _minuteTimer;
@@ -35,24 +31,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _loadStreamUrl();
     _minuteTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
       if (mounted) setState(() {});
     });
   }
 
-  Future<void> _loadStreamUrl() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final saved = prefs.getString('esp32_stream_url');
-      if (saved != null && saved.isNotEmpty) {
-        setState(() => _streamUrl = saved);
-      }
-    } catch (_) {}
-  }
-
   void _onScroll() {
-    // Tampilkan Floating Mini Player saat scroll melebihi 240px
     if (_scrollController.offset > 240 && !_showFloatingCamera) {
       setState(() {
         _showFloatingCamera = true;
@@ -87,7 +71,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         if (newLog.title.toLowerCase().contains('otomatis')) {
           Fluttertoast.showToast(
             msg: 'Berhasil: ${newLog.title}',
-            backgroundColor: AppTheme.statusOnline,
+            backgroundColor: AppTheme.colors.statusOnline,
             textColor: Colors.black,
             toastLength: Toast.LENGTH_LONG,
           );
@@ -95,14 +79,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     });
 
-    final foodState = ref.watch(foodDetectionProvider);
-    final result = foodState.lastResult;
+    final streamUrl = ref.watch(streamUrlProvider);
     final bool isMiniActive = _showFloatingCamera && !_isMiniPlayerClosed;
 
     return Scaffold(
       body: SafeArea(
         child: Stack(
           children: [
+            // --- DECORATIVE PREMIUM BACKGROUND ---
+            Positioned(
+              top: -100,
+              right: -50,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppTheme.colors.accent.withAlpha((255 * 0.15).round()),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -150,
+              left: -100,
+              child: Container(
+                width: 400,
+                height: 400,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppTheme.colors.accent.withAlpha((255 * 0.1).round()),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            
             // --- MAIN SCROLL CONTENT ---
             SingleChildScrollView(
               controller: _scrollController,
@@ -111,21 +130,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 children: [
                   const CustomHeader(),
                   const SizedBox(height: 8),
+                  // Pause kamera utama saat floating player aktif
                   LiveCameraCard(isStreamPaused: isMiniActive),
-                  const SizedBox(height: 16),
-                  const FoodResidualCard(),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   const FeedingControlPanel(),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   const ScheduleView(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   const ActivityLogSection(),
                   const SizedBox(height: 32),
                 ],
               ),
             ),
 
-            // --- YOUTUBE-STYLE FLOATING MINI PLAYER (LIVE VIDEO STREAM) ---
+            // --- YOUTUBE-STYLE FLOATING MINI PLAYER (TRULY LIVE) ---
             if (isMiniActive)
               Positioned(
                 bottom: _pipY,
@@ -135,46 +153,67 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     setState(() {
                       _pipX -= details.delta.dx;
                       _pipY -= details.delta.dy;
+                      // Batasi agar tidak keluar layar
+                      final size = MediaQuery.of(context).size;
+                      _pipX = _pipX.clamp(0.0, size.width - 180);
+                      _pipY = _pipY.clamp(0.0, size.height - 140);
                     });
                   },
                   onTap: _scrollToTop,
                   child: Container(
-                    width: 175,
-                    height: 115,
+                    width: 180,
+                    height: 120,
                     decoration: BoxDecoration(
-                      color: AppTheme.background,
-                      borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+                      color: AppTheme.colors.background,
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppTheme.accent,
+                        color: AppTheme.colors.accent.withAlpha((255 * 0.6).round()),
                         width: 1.5,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withAlpha((255 * 0.7).round()),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
+                          color: Colors.black.withAlpha((255 * 0.6).round()),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                        BoxShadow(
+                          color: AppTheme.colors.accent.withAlpha((255 * 0.1).round()),
+                          blurRadius: 12,
                         ),
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppTheme.radiusCard - 1.5),
+                      borderRadius: BorderRadius.circular(10.5),
                       child: Stack(
                         children: [
-                          // Stream Video Live Asli
+                          // Stream Video LIVE (mengambil alih koneksi dari kamera utama)
                           Center(
                             child: Mjpeg(
                               isLive: true,
-                              stream: _streamUrl,
+                              stream: streamUrl,
                               error: (context, error, stack) => Container(
-                                color: AppTheme.surface,
+                                color: AppTheme.colors.surface,
                                 child: const Center(
-                                  child: Icon(Icons.videocam_off, color: Colors.grey, size: 24),
+                                  child: Icon(Icons.videocam_off, color: Colors.grey, size: 20),
+                                ),
+                              ),
+                              loading: (context) => Container(
+                                color: AppTheme.colors.surface,
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      color: AppTheme.colors.accent,
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
 
-                          // Gradient Shadow Overlay
+                          // Gradient Overlay
                           Positioned.fill(
                             child: Container(
                               decoration: BoxDecoration(
@@ -182,23 +221,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                   colors: [
-                                    Colors.black.withAlpha((255 * 0.6).round()),
+                                    Colors.black.withAlpha((255 * 0.5).round()),
                                     Colors.transparent,
-                                    Colors.black.withAlpha((255 * 0.75).round()),
+                                    Colors.transparent,
+                                    Colors.black.withAlpha((255 * 0.7).round()),
                                   ],
+                                  stops: const [0.0, 0.3, 0.6, 1.0],
                                 ),
                               ),
                             ),
                           ),
 
-                          // Top Badge AI Live
+                          // Top: LIVE Badge
                           Positioned(
                             top: 6,
                             left: 6,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppTheme.live,
+                                color: AppTheme.colors.live,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Row(
@@ -214,8 +255,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'AI LIVE',
-                                    style: AppTheme.labelMedium.copyWith(
+                                    'LIVE',
+                                    style: AppTheme.colors.labelMedium.copyWith(
                                       color: Colors.white,
                                       fontSize: 9,
                                       fontWeight: FontWeight.bold,
@@ -226,57 +267,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                           ),
 
-                          // Close Button (Tutup Mini Player)
+                          // Top: Close Button
                           Positioned(
                             top: 4,
                             right: 4,
                             child: GestureDetector(
                               onTap: () => setState(() => _isMiniPlayerClosed = true),
                               child: Container(
-                                padding: const EdgeInsets.all(4),
+                                padding: const EdgeInsets.all(3),
                                 decoration: BoxDecoration(
                                   color: Colors.black.withAlpha((255 * 0.5).round()),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 14),
+                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 12),
                               ),
                             ),
                           ),
 
-                          // Bottom Title & Tap Guide
-                          Positioned(
-                            bottom: 6,
-                            left: 6,
-                            right: 6,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  result.statusLabel,
-                                  style: AppTheme.labelMedium.copyWith(
-                                    color: AppTheme.accent,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.open_in_full_rounded, color: Colors.white, size: 9),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      'Tap Perbesar',
-                                      style: AppTheme.bodySmall.copyWith(
-                                        color: Colors.white.withAlpha((255 * 0.8).round()),
-                                        fontSize: 8.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
                         ],
                       ),
                     ),

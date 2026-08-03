@@ -80,6 +80,10 @@ static esp_err_t stream_handler(httpd_req_t *req) {
     }
 
     if (res != ESP_OK) break;
+    
+    // Add small delay to allow WiFi stack and watchdog to process background tasks
+    // This dramatically improves stability on ESP32-CAM when streaming MJPEG
+    vTaskDelay(pdMS_TO_TICKS(15));
   }
   return res;
 }

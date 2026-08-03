@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/schedule_provider.dart';
 import '../theme.dart';
+import 'glass_card.dart';
 
 class ScheduleCard extends ConsumerWidget {
   const ScheduleCard({
@@ -39,14 +40,9 @@ class ScheduleCard extends ConsumerWidget {
                 ? activeDays.first
                 : activeDays.join(', '));
 
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-        border: Border.all(color: Colors.white.withAlpha((255 * 0.08).round())),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -59,12 +55,12 @@ class ScheduleCard extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.access_time, color: AppTheme.accent, size: 18),
+                        Icon(Icons.access_time, color: AppTheme.colors.accent, size: 18),
                         const SizedBox(width: 8),
                         Text(
                           timeString,
-                          style: AppTheme.displayMedium.copyWith(
-                            color: AppTheme.primaryText,
+                          style: AppTheme.colors.displayMedium.copyWith(
+                            color: AppTheme.colors.primaryText,
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                           ),
@@ -75,8 +71,8 @@ class ScheduleCard extends ConsumerWidget {
                       const SizedBox(height: 4),
                       Text(
                         label,
-                        style: AppTheme.bodySmall.copyWith(
-                          color: AppTheme.secondaryText,
+                        style: AppTheme.colors.bodySmall.copyWith(
+                          color: AppTheme.colors.secondaryText,
                         ),
                       ),
                     ],
@@ -87,16 +83,16 @@ class ScheduleCard extends ConsumerWidget {
                 children: [
                   Switch(
                     value: isActive,
-                    activeTrackColor: AppTheme.statusOnline,
+                    activeTrackColor: AppTheme.colors.statusOnline,
                     onChanged: (value) => onToggle(value),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.edit, color: AppTheme.accent, size: 20),
+                    icon: Icon(Icons.edit, color: AppTheme.colors.accent, size: 20),
                     onPressed: onEdit,
                     tooltip: 'Edit Schedule',
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete, color: AppTheme.error, size: 20),
+                    icon: Icon(Icons.delete, color: AppTheme.colors.error, size: 20),
                     onPressed: onDelete,
                     tooltip: 'Delete Schedule',
                   ),
@@ -107,13 +103,13 @@ class ScheduleCard extends ConsumerWidget {
           const Divider(height: 20, color: Colors.white12),
           Row(
             children: [
-              const Icon(Icons.repeat, color: AppTheme.secondaryText, size: 14),
+              Icon(Icons.repeat, color: AppTheme.colors.secondaryText, size: 14),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   daysString,
-                  style: AppTheme.bodySmall.copyWith(
-                    color: AppTheme.secondaryText,
+                  style: AppTheme.colors.bodySmall.copyWith(
+                    color: AppTheme.colors.secondaryText,
                   ),
                 ),
               ),
@@ -130,18 +126,16 @@ class AddScheduleButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SizedBox(
-      height: 38,
-      child: ElevatedButton.icon(
-        onPressed: () => _showAddScheduleDialog(context, ref),
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('Add Schedule'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.accent,
-          foregroundColor: Colors.black,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.radiusButton),
-          ),
+    return ElevatedButton.icon(
+      onPressed: () => _showAddScheduleDialog(context, ref),
+      icon: const Icon(Icons.add, size: 20),
+      label: const Text('Tambah Jadwal'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppTheme.colors.accent,
+        foregroundColor: Colors.black, // Since accent is neon, black text is best
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.colors.radiusButton),
         ),
       ),
     );
@@ -158,10 +152,10 @@ class AddScheduleButton extends ConsumerWidget {
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          backgroundColor: AppTheme.background,
+          backgroundColor: AppTheme.colors.background,
           title: Text(
             'Tambah Jadwal Pakan',
-            style: AppTheme.titleMedium.copyWith(color: AppTheme.primaryText),
+            style: AppTheme.colors.titleMedium.copyWith(color: AppTheme.colors.primaryText),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -174,6 +168,12 @@ class AddScheduleButton extends ConsumerWidget {
                     final TimeOfDay? picked = await showTimePicker(
                       context: dialogContext,
                       initialTime: selectedTime,
+                      builder: (BuildContext context, Widget? child) {
+                        return MediaQuery(
+                          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+                          child: child!,
+                        );
+                      },
                     );
                     if (picked != null) {
                       setStateDialog(() {
@@ -184,21 +184,21 @@ class AddScheduleButton extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
-                      color: AppTheme.surface,
-                      borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-                      border: Border.all(color: AppTheme.accent.withAlpha((255 * 0.5).round())),
+                      color: AppTheme.colors.surface,
+                      borderRadius: BorderRadius.circular(AppTheme.colors.radiusInput),
+                      border: Border.all(color: AppTheme.colors.accent.withAlpha((255 * 0.5).round())),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.access_time_filled, color: AppTheme.accent, size: 22),
+                            Icon(Icons.access_time_filled, color: AppTheme.colors.accent, size: 22),
                             const SizedBox(width: 12),
                             Text(
                               '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
-                              style: AppTheme.displayMedium.copyWith(
-                                color: AppTheme.primaryText,
+                              style: AppTheme.colors.displayMedium.copyWith(
+                                color: AppTheme.colors.primaryText,
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -207,7 +207,7 @@ class AddScheduleButton extends ConsumerWidget {
                         ),
                         Text(
                           'Pilih Jam',
-                          style: AppTheme.bodySmall.copyWith(color: AppTheme.accent),
+                          style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.accent),
                         ),
                       ],
                     ),
@@ -219,20 +219,20 @@ class AddScheduleButton extends ConsumerWidget {
                   controller: labelController,
                   decoration: InputDecoration(
                     labelText: 'Label (Contoh: Pakan Pagi)',
-                    labelStyle: AppTheme.bodySmall.copyWith(color: AppTheme.secondaryText),
+                    labelStyle: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.secondaryText),
                     enabledBorder: UnderlineInputBorder(
                       borderSide: BorderSide(color: Colors.white.withAlpha((255 * 0.3).round())),
                     ),
-                    focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppTheme.accent),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppTheme.colors.accent),
                     ),
                   ),
-                  style: AppTheme.bodyLarge.copyWith(color: AppTheme.primaryText),
+                  style: AppTheme.colors.bodyLarge.copyWith(color: AppTheme.colors.primaryText),
                 ),
                 const SizedBox(height: 20),
                 Text(
                   'Hari Pengulangan:',
-                  style: AppTheme.bodySmall.copyWith(color: AppTheme.secondaryText, fontWeight: FontWeight.bold),
+                  style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.secondaryText, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -245,7 +245,7 @@ class AddScheduleButton extends ConsumerWidget {
                       label: Text(
                         dayNames[index],
                         style: TextStyle(
-                          color: isSel ? Colors.black : Colors.white,
+                          color: isSel ? Colors.white : AppTheme.colors.primaryText,
                           fontSize: 12,
                           fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
                         ),
@@ -256,8 +256,8 @@ class AddScheduleButton extends ConsumerWidget {
                           selectedDays[index] = val;
                         });
                       },
-                      backgroundColor: AppTheme.surface,
-                      selectedColor: AppTheme.accent,
+                      backgroundColor: AppTheme.colors.surface,
+                      selectedColor: AppTheme.colors.accent,
                       showCheckmark: false,
                     );
                   }),
@@ -268,7 +268,7 @@ class AddScheduleButton extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text('Batal', style: AppTheme.bodySmall.copyWith(color: AppTheme.error)),
+              child: Text('Batal', style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.error)),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -284,6 +284,9 @@ class AddScheduleButton extends ConsumerWidget {
                   );
                   if (dialogContext.mounted) {
                     Navigator.of(dialogContext).pop();
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(content: Text('Jadwal berhasil ditambahkan')),
+                    );
                   }
                 } catch (e) {
                   if (dialogContext.mounted) {
@@ -294,7 +297,7 @@ class AddScheduleButton extends ConsumerWidget {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.statusOnline,
+                backgroundColor: AppTheme.colors.statusOnline,
                 foregroundColor: Colors.black,
               ),
               child: const Text('Simpan Jadwal'),
@@ -318,8 +321,8 @@ class ScheduleView extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        color: AppTheme.colors.surface,
+        borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
         border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
       ),
       child: Column(
@@ -331,12 +334,12 @@ class ScheduleView extends ConsumerWidget {
               Expanded(
                 child: Row(
                   children: [
-                    const Icon(Icons.schedule, color: AppTheme.accent, size: 20),
+                    Icon(Icons.schedule, color: AppTheme.colors.accent, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'JADWAL PAKAN OTOMATIS',
-                        style: AppTheme.titleSmall.copyWith(color: AppTheme.accent, fontWeight: FontWeight.bold),
+                        style: AppTheme.colors.titleSmall.copyWith(color: AppTheme.colors.accent, fontWeight: FontWeight.bold),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -352,12 +355,12 @@ class ScheduleView extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.error.withAlpha((255 * 0.15).round()),
-                borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                color: AppTheme.colors.error.withAlpha((255 * 0.15).round()),
+                borderRadius: BorderRadius.circular(AppTheme.colors.radiusInput),
               ),
               child: Text(
                 'Error: ${scheduleState.lastError}',
-                style: AppTheme.bodySmall.copyWith(color: AppTheme.error),
+                style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.error),
               ),
             )
           else if (scheduleState.schedules.isEmpty)
@@ -369,17 +372,17 @@ class ScheduleView extends ConsumerWidget {
                   Icon(
                     Icons.alarm_off,
                     size: 44,
-                    color: AppTheme.secondaryText.withAlpha((255 * 0.5).round()),
+                    color: AppTheme.colors.secondaryText.withAlpha((255 * 0.5).round()),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'Belum Ada Jadwal Pakan',
-                    style: AppTheme.titleMedium.copyWith(color: AppTheme.secondaryText),
+                    style: AppTheme.colors.titleMedium.copyWith(color: AppTheme.colors.secondaryText),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Klik tombol "+ Add Schedule" untuk menambah jam pakan otomatis',
-                    style: AppTheme.bodySmall.copyWith(color: AppTheme.secondaryText),
+                    style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.secondaryText),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -410,8 +413,8 @@ class ScheduleView extends ConsumerWidget {
               return Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppTheme.background,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+                  color: AppTheme.colors.background,
+                  borderRadius: BorderRadius.circular(AppTheme.colors.radiusInput),
                   border: Border.all(color: Colors.white.withAlpha((255 * 0.08).round())),
                 ),
                 child: Column(
@@ -419,7 +422,7 @@ class ScheduleView extends ConsumerWidget {
                   children: [
                     Text(
                       'Jadwal Pakan Berikutnya',
-                      style: AppTheme.bodySmall.copyWith(color: AppTheme.accent, fontWeight: FontWeight.bold),
+                      style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.accent, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 6),
                     Column(
@@ -427,8 +430,8 @@ class ScheduleView extends ConsumerWidget {
                       children: [
                         Text(
                           nextSchedule.time,
-                          style: AppTheme.displayMedium.copyWith(
-                            color: AppTheme.primaryText,
+                          style: AppTheme.colors.displayMedium.copyWith(
+                            color: AppTheme.colors.primaryText,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
@@ -438,7 +441,7 @@ class ScheduleView extends ConsumerWidget {
                           nextSchedule.label?.isNotEmpty == true
                               ? nextSchedule.label!
                               : 'Jadwal Pakan Otomatis',
-                          style: AppTheme.bodySmall.copyWith(color: AppTheme.secondaryText),
+                          style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.secondaryText),
                         ),
                       ],
                     ),
@@ -468,10 +471,10 @@ class ScheduleView extends ConsumerWidget {
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          backgroundColor: AppTheme.background,
+          backgroundColor: AppTheme.colors.background,
           title: Text(
             'Edit Jadwal Pakan',
-            style: AppTheme.titleMedium.copyWith(color: AppTheme.primaryText),
+            style: AppTheme.colors.titleMedium.copyWith(color: AppTheme.colors.primaryText),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -484,6 +487,12 @@ class ScheduleView extends ConsumerWidget {
                     final TimeOfDay? picked = await showTimePicker(
                       context: dialogContext,
                       initialTime: selectedTime,
+                      builder: (BuildContext context, Widget? child) {
+                        return MediaQuery(
+                          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+                          child: child!,
+                        );
+                      },
                     );
                     if (picked != null) {
                       setStateDialog(() {
@@ -494,21 +503,21 @@ class ScheduleView extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
-                      color: AppTheme.surface,
-                      borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-                      border: Border.all(color: AppTheme.accent.withAlpha((255 * 0.5).round())),
+                      color: AppTheme.colors.surface,
+                      borderRadius: BorderRadius.circular(AppTheme.colors.radiusInput),
+                      border: Border.all(color: AppTheme.colors.accent.withAlpha((255 * 0.5).round())),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.access_time_filled, color: AppTheme.accent, size: 22),
+                            Icon(Icons.access_time_filled, color: AppTheme.colors.accent, size: 22),
                             const SizedBox(width: 12),
                             Text(
                               '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
-                              style: AppTheme.displayMedium.copyWith(
-                                color: AppTheme.primaryText,
+                              style: AppTheme.colors.displayMedium.copyWith(
+                                color: AppTheme.colors.primaryText,
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -517,7 +526,7 @@ class ScheduleView extends ConsumerWidget {
                         ),
                         Text(
                           'Ubah Jam',
-                          style: AppTheme.bodySmall.copyWith(color: AppTheme.accent),
+                          style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.accent),
                         ),
                       ],
                     ),
@@ -529,20 +538,20 @@ class ScheduleView extends ConsumerWidget {
                   controller: labelController,
                   decoration: InputDecoration(
                     labelText: 'Label (Opsional)',
-                    labelStyle: AppTheme.bodySmall.copyWith(color: AppTheme.secondaryText),
+                    labelStyle: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.secondaryText),
                     enabledBorder: UnderlineInputBorder(
                       borderSide: BorderSide(color: Colors.white.withAlpha((255 * 0.3).round())),
                     ),
-                    focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(color: AppTheme.accent),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AppTheme.colors.accent),
                     ),
                   ),
-                  style: AppTheme.bodyLarge.copyWith(color: AppTheme.primaryText),
+                  style: AppTheme.colors.bodyLarge.copyWith(color: AppTheme.colors.primaryText),
                 ),
                 const SizedBox(height: 20),
                 Text(
                   'Hari Pengulangan:',
-                  style: AppTheme.bodySmall.copyWith(color: AppTheme.secondaryText, fontWeight: FontWeight.bold),
+                  style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.secondaryText, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -555,7 +564,7 @@ class ScheduleView extends ConsumerWidget {
                       label: Text(
                         dayNames[index],
                         style: TextStyle(
-                          color: isSel ? Colors.black : Colors.white,
+                          color: isSel ? Colors.white : AppTheme.colors.primaryText,
                           fontSize: 12,
                           fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
                         ),
@@ -566,8 +575,8 @@ class ScheduleView extends ConsumerWidget {
                           selectedDays[index] = val;
                         });
                       },
-                      backgroundColor: AppTheme.surface,
-                      selectedColor: AppTheme.accent,
+                      backgroundColor: AppTheme.colors.surface,
+                      selectedColor: AppTheme.colors.accent,
                       showCheckmark: false,
                     );
                   }),
@@ -578,7 +587,7 @@ class ScheduleView extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text('Batal', style: AppTheme.bodySmall.copyWith(color: AppTheme.error)),
+              child: Text('Batal', style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.error)),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -596,6 +605,9 @@ class ScheduleView extends ConsumerWidget {
                   await ref.read(scheduleProvider.notifier).updateSchedule(schedule.id, updatedSchedule);
                   if (dialogContext.mounted) {
                     Navigator.of(dialogContext).pop();
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      const SnackBar(content: Text('Jadwal berhasil diperbarui')),
+                    );
                   }
                 } catch (e) {
                   if (dialogContext.mounted) {
@@ -606,7 +618,7 @@ class ScheduleView extends ConsumerWidget {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.statusOnline,
+                backgroundColor: AppTheme.colors.statusOnline,
                 foregroundColor: Colors.black,
               ),
               child: const Text('Simpan'),

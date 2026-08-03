@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/log_provider.dart';
 import '../screens/history_detail_screen.dart';
 import '../theme.dart';
+import 'glass_card.dart';
 
 class ActivityLogSection extends ConsumerWidget {
   const ActivityLogSection({super.key});
@@ -26,11 +27,11 @@ class ActivityLogSection extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.bar_chart_rounded, color: AppTheme.accent, size: 20),
+                  Icon(Icons.bar_chart_rounded, color: AppTheme.colors.accent, size: 20),
                   const SizedBox(width: 10),
                   Text(
                     'AKTIVITAS HARI INI',
-                    style: AppTheme.titleSmall,
+                    style: AppTheme.colors.titleSmall,
                   ),
                 ],
               ),
@@ -44,13 +45,13 @@ class ActivityLogSection extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppTheme.surfaceLight,
-                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                      color: AppTheme.colors.surfaceLight,
+                      borderRadius: BorderRadius.circular(AppTheme.colors.radiusPill),
                       border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
                     ),
                     child: Text(
                       'Semua',
-                      style: AppTheme.labelMedium.copyWith(color: AppTheme.primaryText, fontSize: 11),
+                      style: AppTheme.colors.labelMedium.copyWith(color: AppTheme.colors.primaryText, fontSize: 11),
                     ),
                   ),
                 ),
@@ -86,18 +87,18 @@ class ActivityLogSection extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.error.withAlpha((255 * 0.05).round()),
-        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-        border: Border.all(color: AppTheme.error.withAlpha((255 * 0.1).round())),
+        color: AppTheme.colors.error.withAlpha((255 * 0.05).round()),
+        borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
+        border: Border.all(color: AppTheme.colors.error.withAlpha((255 * 0.1).round())),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded, color: AppTheme.error, size: 20),
+          Icon(Icons.error_outline_rounded, color: AppTheme.colors.error, size: 20),
           const SizedBox(width: 16),
           Expanded(
             child: Text(
               error,
-              style: AppTheme.bodySmall.copyWith(color: AppTheme.error.withAlpha((255 * 0.8).round())),
+              style: AppTheme.colors.bodySmall.copyWith(color: AppTheme.colors.error.withAlpha((255 * 0.8).round())),
             ),
           ),
         ],
@@ -143,35 +144,30 @@ class ActivityLogSection extends ConsumerWidget {
           direction: DismissDirection.endToStart,
           background: Container(
             decoration: BoxDecoration(
-              color: AppTheme.error.withAlpha((255 * 0.2).round()),
-              borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+              color: AppTheme.colors.error.withAlpha((255 * 0.2).round()),
+              borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
             ),
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 20),
-            child: const Icon(Icons.delete_outline_rounded, color: AppTheme.error),
+            child: Icon(Icons.delete_outline_rounded, color: AppTheme.colors.error),
           ),
           onDismissed: (_) {
             if (log.id != null) ref.read(logProvider.notifier).deleteLog(log.id!);
           },
-          child: Container(
+          child: GlassCard(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-              border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
-            ),
             child: Row(
               children: [
                 Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: (isSuccess ? AppTheme.statusOnline : AppTheme.warning).withAlpha((255 * 0.1).round()),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+                    color: (isSuccess ? AppTheme.colors.statusOnline : AppTheme.colors.warning).withAlpha((255 * 0.1).round()),
+                    borderRadius: BorderRadius.circular(AppTheme.colors.radiusButton),
                   ),
                   child: Icon(
                     isSuccess ? Icons.check_circle_outline_rounded : Icons.priority_high_rounded,
-                    color: isSuccess ? AppTheme.statusOnline : AppTheme.warning,
+                    color: isSuccess ? AppTheme.colors.statusOnline : AppTheme.colors.warning,
                     size: 20,
                   ),
                 ),
@@ -182,12 +178,12 @@ class ActivityLogSection extends ConsumerWidget {
                     children: [
                       Text(
                         log.title,
-                        style: AppTheme.titleMedium,
+                        style: AppTheme.colors.titleMedium,
                       ),
                       const SizedBox(height: 4),
                       Text(
                         timeFormatted,
-                        style: AppTheme.bodySmall,
+                        style: AppTheme.colors.bodySmall,
                       ),
                     ],
                   ),
@@ -195,13 +191,13 @@ class ActivityLogSection extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceLight,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                    color: AppTheme.colors.surfaceLight,
+                    borderRadius: BorderRadius.circular(AppTheme.colors.radiusPill),
                   ),
                   child: Text(
                     log.status,
-                    style: AppTheme.labelMedium.copyWith(
-                      color: isSuccess ? AppTheme.statusOnline : AppTheme.warning,
+                    style: AppTheme.colors.labelMedium.copyWith(
+                      color: isSuccess ? AppTheme.colors.statusOnline : AppTheme.colors.warning,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -229,17 +225,17 @@ class _InfoPlaceholder extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+        color: AppTheme.colors.surface,
+        borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
         border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
       ),
       child: Column(
         children: [
-          Icon(icon, size: 36, color: AppTheme.secondaryText.withAlpha((255 * 0.3).round())),
+          Icon(icon, size: 36, color: AppTheme.colors.secondaryText.withAlpha((255 * 0.3).round())),
           const SizedBox(height: 16),
-          Text(title, style: AppTheme.titleMedium.copyWith(color: AppTheme.secondaryText)),
+          Text(title, style: AppTheme.colors.titleMedium.copyWith(color: AppTheme.colors.secondaryText)),
           const SizedBox(height: 6),
-          Text(subtitle, style: AppTheme.bodySmall, textAlign: TextAlign.center),
+          Text(subtitle, style: AppTheme.colors.bodySmall, textAlign: TextAlign.center),
         ],
       ),
     );
@@ -254,8 +250,8 @@ class _SkeletonItem extends StatelessWidget {
       child: Container(
         height: 70,
         decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+          color: AppTheme.colors.surface,
+          borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
         ),
       ),
     );

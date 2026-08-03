@@ -59,7 +59,7 @@ const char* password = "11111112";
 const int motorPin = 15;
 const int flashLedPin = 4;
 const int statusLedPin = 33;
-const int dispenseDuration = 7400;
+const int dispenseDuration = 7700;
 
 FirebaseData fbdo;
 FirebaseAuth auth;
@@ -72,12 +72,24 @@ void startCameraServer();
 void nyalakanMotor() { pinMode(motorPin, OUTPUT); digitalWrite(motorPin, LOW); Serial.println("[Motor] ON"); }
 void matikanMotor() { pinMode(motorPin, INPUT); Serial.println("[Motor] OFF (high‑Z)"); }
 
+bool motorRunning = false;
+unsigned long motorStartTime = 0;
+
 void dispenseAction() {
   Serial.println("\n[!] Memberi makan...");
   digitalWrite(statusLedPin, LOW);
   nyalakanMotor();
-  delay(dispenseDuration);
+  motorRunning = true;
+  motorStartTime = millis();
+
+  // Non-blocking: tunggu motor selesai sambil tetap melayani WiFi & kamera
+  while (millis() - motorStartTime < (unsigned long)dispenseDuration) {
+    ArduinoOTA.handle();  // OTA tetap jalan
+    delay(10);            // yield ke WiFi stack agar tidak disconnect
+  }
+
   matikanMotor();
+  motorRunning = false;
   digitalWrite(statusLedPin, HIGH);
   Serial.println("[!] Selesai\n");
 }
@@ -102,8 +114,17 @@ void loadSchedulesFromFirebase() {
           if (scheduleObj.get(result, "dosage")) dosageVal = result.intValue;
           if (scheduleObj.get(result, "active")) activeVal = result.boolValue;
 
-          // Days array is optional – if present we ignore for simplicity (default true)
+          // Default to true
           bool daysVal[7] = {true, true, true, true, true, true, true};
+          
+          if (scheduleObj.get(result, "days")) {
+             FirebaseJsonArray arr;
+             arr.setJsonArrayData(result.stringValue);
+             for(size_t d = 0; d < 7; d++) {
+                 FirebaseJsonData arrRes;
+                 if (arr.get(arrRes, d)) daysVal[d] = arrRes.boolValue;
+             }
+          }
 
           if (!timeVal.isEmpty() && scheduleCount < 10) {
             scheduledFeedings[scheduleCount].time   = timeVal;
@@ -137,11 +158,14 @@ void checkAndExecuteSchedule() {
     if (!sf.active) continue;
     if (!sf.days[timeinfo.tm_wday]) continue;
     if (strcmp(sf.time.c_str(), cur) == 0) {
-      static int lastFeedDay[10] = {-1};
-      if (lastFeedDay[i] != timeinfo.tm_yday) {
+      static int lastFeedDay[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+      static int lastFeedMinute[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+      
+      if (lastFeedDay[i] != timeinfo.tm_yday || lastFeedMinute[i] != timeinfo.tm_min) {
         Serial.printf("\n=== Jadwal tercapai %s ===\n", sf.time.c_str());
         dispenseAction();
         lastFeedDay[i] = timeinfo.tm_yday;
+        lastFeedMinute[i] = timeinfo.tm_min;
 
         // Push activity log to Firebase
         FirebaseJson logJson;
@@ -211,6 +235,13 @@ void setup() {
 
   startCameraServer();
   Serial.println("=== SYSTEM READY ===");
+
+  // Auto-publish stream URL ke Firebase agar aplikasi bisa auto-detect IP
+  if (Firebase.ready() && signupOK) {
+    String streamUrl = "http://" + WiFi.localIP().toString() + ":81/stream";
+    Firebase.RTDB.setString(&fbdo, "/aquafeed/stream_url", streamUrl);
+    Serial.printf("[Auto-IP] Published: %s\n", streamUrl.c_str());
+  }
 }
 
 void loop() {

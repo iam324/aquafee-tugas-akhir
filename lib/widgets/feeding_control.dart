@@ -8,13 +8,13 @@ import '../providers/device_provider.dart';
 import '../providers/demo_mode_provider.dart';
 
 import '../theme.dart';
+import 'glass_card.dart';
 
 class FeedingControlPanel extends ConsumerWidget {
   const FeedingControlPanel({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final feedState = ref.watch(feedProvider);
     final feedNotifier = ref.read(feedProvider.notifier);
     final deviceState = ref.watch(deviceProvider);
     final isDemoMode = ref.watch(demoModeProvider);
@@ -23,43 +23,38 @@ class FeedingControlPanel extends ConsumerWidget {
 
 
 
-    return Container(
+    return GlassCard(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-        border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.water_drop_outlined, color: AppTheme.accent, size: 18),
+              Icon(Icons.water_drop_outlined, color: AppTheme.colors.accent, size: 18),
               const SizedBox(width: 10),
               Text(
                 'KONTROL PAKAN',
-                style: AppTheme.titleSmall,
+                style: AppTheme.colors.titleSmall,
               ),
               const Spacer(),
               if (isDemoMode)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppTheme.warning.withAlpha((255 * 0.15).round()),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-                    border: Border.all(color: AppTheme.warning.withAlpha((255 * 0.3).round())),
+                    color: AppTheme.colors.warning.withAlpha((255 * 0.15).round()),
+                    borderRadius: BorderRadius.circular(AppTheme.colors.radiusPill),
+                    border: Border.all(color: AppTheme.colors.warning.withAlpha((255 * 0.3).round())),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.science_outlined, size: 12, color: AppTheme.warning),
+                      Icon(Icons.science_outlined, size: 12, color: AppTheme.colors.warning),
                       const SizedBox(width: 4),
                       Text(
                         'DEMO',
-                        style: AppTheme.labelMedium.copyWith(
-                          color: AppTheme.warning,
+                        style: AppTheme.colors.labelMedium.copyWith(
+                          color: AppTheme.colors.warning,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -76,7 +71,7 @@ class FeedingControlPanel extends ConsumerWidget {
             isDemoMode: isDemoMode,
             onPressed: () async {
               // Haptic feedback
-              final hasVibrator = await Vibration.hasVibrator() ?? false;
+              final hasVibrator = await Vibration.hasVibrator() == true;
               if (hasVibrator) {
                 await Vibration.vibrate(duration: 50);
               }
@@ -110,7 +105,7 @@ class FeedingControlPanel extends ConsumerWidget {
                     msg: isDemoMode
                         ? 'DEMO: Pakan (tidak terkirim ke alat)'
                         : 'Berhasil memberikan pakan',
-                    backgroundColor: AppTheme.statusOnline,
+                    backgroundColor: AppTheme.colors.statusOnline,
                     textColor: Colors.black,
                   );
                 }
@@ -118,7 +113,7 @@ class FeedingControlPanel extends ConsumerWidget {
                 if (context.mounted) {
                   Fluttertoast.showToast(
                     msg: 'Gagal memberi pakan: $e',
-                    backgroundColor: AppTheme.error,
+                    backgroundColor: AppTheme.colors.error,
                     textColor: Colors.white,
                   );
                 }
@@ -147,23 +142,23 @@ class _FeedButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isOffline ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: isOffline ? AppTheme.surfaceLight : AppTheme.accent,
-          foregroundColor: isOffline ? AppTheme.secondaryText : Colors.black,
-          disabledBackgroundColor: AppTheme.surfaceLight,
-          disabledForegroundColor: AppTheme.secondaryText,
+          backgroundColor: isOffline ? AppTheme.colors.surfaceLight : AppTheme.colors.accent,
+          foregroundColor: isOffline ? AppTheme.colors.secondaryText : Colors.black,
+          disabledBackgroundColor: AppTheme.colors.surfaceLight,
+          disabledForegroundColor: AppTheme.colors.secondaryText,
           shadowColor: Colors.transparent, // No glow
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusButton)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.colors.radiusButton)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(isOffline && !isDemoMode ? Icons.offline_bolt_rounded : isDemoMode ? Icons.science_outlined : Icons.bolt_rounded, 
-                 color: isOffline ? AppTheme.secondaryText : Colors.black, size: 22),
+                 color: isOffline ? AppTheme.colors.secondaryText : Colors.black, size: 22),
             const SizedBox(width: 12),
             Text(
               isOffline && !isDemoMode ? 'ALAT OFFLINE' : isDemoMode ? 'BERI PAKAN (DEMO)' : 'BERI PAKAN SEKARANG',
-              style: AppTheme.labelLarge.copyWith(
-                color: isOffline ? AppTheme.secondaryText : Colors.black, 
+              style: AppTheme.colors.labelLarge.copyWith(
+                color: isOffline ? AppTheme.colors.secondaryText : Colors.black, 
                 letterSpacing: 0.5
               ),
             ),

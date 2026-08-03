@@ -22,7 +22,7 @@ class CustomHeader extends ConsumerWidget {
             children: [
               Text(
                 'AquaFeed',
-                style: AppTheme.displaySmall.copyWith(color: AppTheme.primaryText),
+                style: AppTheme.colors.displaySmall.copyWith(color: AppTheme.colors.primaryText),
               ),
               const SizedBox(height: 4),
               Row(
@@ -31,10 +31,10 @@ class CustomHeader extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Text(
                     deviceState.isFirebaseConnected ? 'System Online' : 'System Offline',
-                    style: AppTheme.labelMedium.copyWith(
+                    style: AppTheme.colors.labelMedium.copyWith(
                       color: deviceState.isFirebaseConnected 
-                          ? AppTheme.statusOnline
-                          : AppTheme.secondaryText,
+                          ? AppTheme.colors.statusOnline
+                          : AppTheme.colors.secondaryText,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -75,7 +75,7 @@ class _StatusIndicator extends StatelessWidget {
       width: 8,
       height: 8,
       decoration: BoxDecoration(
-        color: isActive ? AppTheme.statusOnline : AppTheme.error,
+        color: isActive ? AppTheme.colors.statusOnline : AppTheme.colors.error,
         shape: BoxShape.circle,
       ),
     );
@@ -96,13 +96,13 @@ class _HeaderActionBtn extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: AppTheme.surfaceLight,
-          borderRadius: BorderRadius.circular(AppTheme.radiusButton),
+          color: AppTheme.colors.surfaceLight,
+          borderRadius: BorderRadius.circular(AppTheme.colors.radiusButton),
           border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
         ),
         child: Icon(
           icon,
-          color: AppTheme.secondaryText,
+          color: AppTheme.colors.secondaryText,
           size: 22,
         ),
       ),
