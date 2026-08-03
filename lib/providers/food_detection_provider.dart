@@ -69,8 +69,8 @@ class FoodDetectionNotifier extends Notifier<FoodDetectionState> {
       detectNow();
     });
 
-    // Kemudian ulang otomatis setiap 10 detik
-    _autoScanTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    // Kemudian ulang otomatis setiap 15 detik
+    _autoScanTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       detectNow();
     });
   }
@@ -86,8 +86,10 @@ class FoodDetectionNotifier extends Notifier<FoodDetectionState> {
     );
 
     try {
-      Uint8List? frameBytes = await _service.captureFrame(_streamUrl);
-      if (frameBytes == null && liveCameraKey.currentState != null) {
+      // HINDARI request HTTP /capture ke ESP32 karena membuat ESP32 berat dan panas.
+      // Ambil gambar langsung dari layar aplikasi (stream yang sedang berjalan).
+      Uint8List? frameBytes;
+      if (liveCameraKey.currentState != null) {
         frameBytes = await liveCameraKey.currentState!.getSnapshotBytes();
       }
 

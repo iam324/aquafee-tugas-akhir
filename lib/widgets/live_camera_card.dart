@@ -126,7 +126,7 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
             ),
 
             // --- AI BOUNDING BOX OVERLAY (KOTAK HIJAU PENANDA PAKAN) ---
-            if (hasDetection && result.status != FoodResidualStatus.empty)
+            if (_isLive && !widget.isStreamPaused && hasDetection && result.status != FoodResidualStatus.empty)
               Positioned.fill(
                 child: CustomPaint(
                   painter: AIBoundingBoxPainter(
@@ -197,8 +197,13 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
           ),
           const SizedBox(width: 8),
           _ControlButton(
-            icon: Icons.camera_alt_outlined,
-            onTap: _takeSnapshot,
+            icon: Icons.refresh_rounded,
+            onTap: () {
+              setState(() => _isLive = false);
+              Future.delayed(const Duration(milliseconds: 200), () {
+                if (mounted) setState(() => _isLive = true);
+              });
+            },
           ),
         ],
       ),

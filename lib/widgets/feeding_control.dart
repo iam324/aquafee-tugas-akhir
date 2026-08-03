@@ -70,42 +70,11 @@ class FeedingControlPanel extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _DosageDisplay(dosage: feedState.dosage.toInt()),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                children: [
-                  _ControlBtn(
-                    icon: Icons.add_rounded,
-                    onTap: feedNotifier.incrementDosage,
-                  ),
-                  const SizedBox(height: 12),
-                  _ControlBtn(
-                    icon: Icons.remove_rounded,
-                    onTap: feedNotifier.decrementDosage,
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           _FeedButton(
             isOffline: !canFeed,
             isDemoMode: isDemoMode,
             onPressed: () async {
-              final dosage = feedState.dosage;
-              if (dosage <= 0) {
-                Fluttertoast.showToast(
-                  msg: 'Dosis harus lebih dari 0g',
-                  backgroundColor: AppTheme.error,
-                  textColor: Colors.white,
-                );
-                return;
-              }
-
               // Haptic feedback
               final hasVibrator = await Vibration.hasVibrator() ?? false;
               if (hasVibrator) {
@@ -123,8 +92,8 @@ class FeedingControlPanel extends ConsumerWidget {
                 final now = DateTime.now();
                 final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
                 final logTitle = isDemoMode
-                    ? 'Pakan ${dosage}g (DEMO)'
-                    : 'Pakan ${dosage}g diberikan';
+                    ? 'Pakan diberikan (DEMO)'
+                    : 'Pakan diberikan';
 
                 await ref.read(logProvider.notifier).addLog(
                   ActivityLog(
@@ -132,7 +101,6 @@ class FeedingControlPanel extends ConsumerWidget {
                     time: timeStr,
                     type: LogType.success,
                     status: isDemoMode ? 'Demo' : 'Selesai',
-                    dosage: dosage,
                     timestamp: now,
                   ),
                 );
@@ -140,8 +108,8 @@ class FeedingControlPanel extends ConsumerWidget {
                 if (context.mounted) {
                   Fluttertoast.showToast(
                     msg: isDemoMode
-                        ? 'DEMO: ${dosage}g pakan (tidak terkirim ke alat)'
-                        : 'Berhasil memberikan ${dosage}g pakan',
+                        ? 'DEMO: Pakan (tidak terkirim ke alat)'
+                        : 'Berhasil memberikan pakan',
                     backgroundColor: AppTheme.statusOnline,
                     textColor: Colors.black,
                   );
@@ -164,75 +132,6 @@ class FeedingControlPanel extends ConsumerWidget {
 
   }
 
-class _DosageDisplay extends StatelessWidget {
-  final int dosage;
-  const _DosageDisplay({required this.dosage});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 110,
-      decoration: BoxDecoration(
-        color: AppTheme.background, // Darker than surface for depth
-        borderRadius: BorderRadius.circular(AppTheme.radiusInput),
-        border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('Dosis Terpilih', style: AppTheme.bodySmall.copyWith(fontWeight: FontWeight.w500)),
-          const SizedBox(height: 4),
-          RichText(
-            text: TextSpan(
-              style: AppTheme.bodyLarge.copyWith(color: AppTheme.primaryText),
-              children: [
-                TextSpan(
-                  text: '$dosage',
-                  style: AppTheme.displayLarge.copyWith(fontWeight: FontWeight.w700)
-                ),
-                const TextSpan(text: ' '),
-                TextSpan(
-                  text: 'gram',
-                  style: AppTheme.bodyMedium.copyWith(
-                    color: AppTheme.secondaryText, 
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ControlBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _ControlBtn({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.radiusButton),
-        child: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceLight,
-            borderRadius: BorderRadius.circular(AppTheme.radiusButton),
-            border: Border.all(color: Colors.white.withAlpha((255 * 0.08).round())),
-          ),
-          child: Icon(icon, color: AppTheme.primaryText, size: 24),
-        ),
-      ),
-    );
-  }
-}
 
 class _FeedButton extends StatelessWidget {
   final VoidCallback onPressed;

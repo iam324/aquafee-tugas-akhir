@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_mjpeg/flutter_mjpeg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'dart:async';
 import 'widgets/custom_header.dart';
 import 'widgets/live_camera_card.dart';
-import 'widgets/turbidity_card.dart';
 import 'widgets/food_residual_card.dart';
 import 'widgets/feeding_control.dart';
+import 'widgets/schedule_card.dart';
 import 'widgets/activity_log.dart';
 import 'providers/food_detection_provider.dart';
+import 'providers/log_provider.dart';
 import 'theme.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -23,12 +26,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _showFloatingCamera = false;
   bool _isMiniPlayerClosed = false;
   String _streamUrl = 'http://10.184.111.136:81/stream';
+  
+  double _pipX = 16.0;
+  double _pipY = 24.0;
+  Timer? _minuteTimer;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
     _loadStreamUrl();
+    _minuteTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _loadStreamUrl() async {
@@ -63,6 +73,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   void dispose() {
+    _minuteTimer?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -70,6 +81,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<LogState>(logProvider, (previous, next) {
+      if (previous != null && !previous.isLoading && next.logs.length > previous.logs.length) {
+        final newLog = next.logs.first;
+        if (newLog.title.toLowerCase().contains('otomatis')) {
+          Fluttertoast.showToast(
+            msg: 'Berhasil: ${newLog.title}',
+            backgroundColor: AppTheme.statusOnline,
+            textColor: Colors.black,
+            toastLength: Toast.LENGTH_LONG,
+          );
+        }
+      }
+    });
+
     final foodState = ref.watch(foodDetectionProvider);
     final result = foodState.lastResult;
     final bool isMiniActive = _showFloatingCamera && !_isMiniPlayerClosed;
@@ -88,11 +113,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(height: 8),
                   LiveCameraCard(isStreamPaused: isMiniActive),
                   const SizedBox(height: 16),
-                  const TurbidityStatusCard(),
-                  const SizedBox(height: 16),
                   const FoodResidualCard(),
                   const SizedBox(height: 16),
                   const FeedingControlPanel(),
+                  const SizedBox(height: 16),
+                  const ScheduleView(),
                   const SizedBox(height: 20),
                   const ActivityLogSection(),
                   const SizedBox(height: 32),
@@ -103,9 +128,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // --- YOUTUBE-STYLE FLOATING MINI PLAYER (LIVE VIDEO STREAM) ---
             if (isMiniActive)
               Positioned(
-                bottom: 24,
-                right: 16,
+                bottom: _pipY,
+                right: _pipX,
                 child: GestureDetector(
+                  onPanUpdate: (details) {
+                    setState(() {
+                      _pipX -= details.delta.dx;
+                      _pipY -= details.delta.dy;
+                    });
+                  },
                   onTap: _scrollToTop,
                   child: Container(
                     width: 175,

@@ -40,7 +40,7 @@ class ActivityLog {
     status: json['status'],
     dosage: json['dosage'] ?? 0,
     timestamp: json['timestamp'] != null
-        ? DateTime.fromMillisecondsSinceEpoch(json['timestamp'])
+        ? DateTime.fromMillisecondsSinceEpoch((json['timestamp'] as num).toInt())
         : DateTime.now(),
   );
 }
@@ -163,7 +163,7 @@ class LogNotifier extends Notifier<LogState> {
         final dosage = demoDosages[i];
         if (dosage > 0) {
           await _db.push().set({
-            'title': 'Pakan ${dosage}g diberikan',
+            'title': 'Pakan $dosage diberikan',
             'time': '$dayStr $timeStr',
             'type': 0,
             'status': 'Selesai',
