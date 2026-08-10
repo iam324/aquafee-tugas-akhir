@@ -7,6 +7,7 @@ import 'widgets/custom_header.dart';
 import 'widgets/live_camera_card.dart';
 import 'widgets/feeding_control.dart';
 import 'widgets/schedule_card.dart';
+import 'widgets/food_detection_panel.dart';
 import 'widgets/activity_log.dart';
 import 'providers/log_provider.dart';
 import 'theme.dart';
@@ -86,42 +87,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // --- DECORATIVE PREMIUM BACKGROUND ---
-            Positioned(
-              top: -100,
-              right: -50,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppTheme.colors.accent.withAlpha((255 * 0.15).round()),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -150,
-              left: -100,
-              child: Container(
-                width: 400,
-                height: 400,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppTheme.colors.accent.withAlpha((255 * 0.1).round()),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            
             // --- MAIN SCROLL CONTENT ---
             SingleChildScrollView(
               controller: _scrollController,
@@ -132,6 +97,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(height: 8),
                   // Pause kamera utama saat floating player aktif
                   LiveCameraCard(isStreamPaused: isMiniActive),
+                  const SizedBox(height: 12),
+                  const FoodDetectionPanel(),
                   const SizedBox(height: 12),
                   const FeedingControlPanel(),
                   const SizedBox(height: 12),

@@ -55,22 +55,25 @@ const char* password = "11111112";
 #define API_KEY "AIzaSyCPuyJBdxF2h-dwLCadbLHrGSYTVbyniVg"
 #define DATABASE_URL "https://aquafeed-f3451-default-rtdb.firebaseio.com/"
 
-// Transistor driver & LEDs
-const int motorPin = 15;
+// L298N Mini Motor Driver (H-Bridge)
+const int motorIN1 = 15;  // IN1 → Putar MAJU
+const int motorIN2 = 14;  // IN2 → Putar MUNDUR
 const int flashLedPin = 4;
 const int statusLedPin = 33;
-const int dispenseDuration = 7700;
+const int dispenseDuration = 6125; // 6.5 detik pas
 
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig configFb;
 bool signupOK = false;
+bool bootReady = false; // Guard: Cegah motor berputar saat ESP32 baru restart
 
 void startCameraServer();
 
-// Motor control (high‑impedance standby)
-void nyalakanMotor() { pinMode(motorPin, OUTPUT); digitalWrite(motorPin, LOW); Serial.println("[Motor] ON"); }
-void matikanMotor() { pinMode(motorPin, INPUT); Serial.println("[Motor] OFF (high‑Z)"); }
+// L298N Mini Motor Control Functions
+void motorMaju()   { digitalWrite(motorIN1, HIGH); digitalWrite(motorIN2, LOW);  Serial.println("[Motor] MAJU"); }
+void motorMundur() { digitalWrite(motorIN1, LOW);  digitalWrite(motorIN2, HIGH); Serial.println("[Motor] MUNDUR"); }
+void motorBerhenti() { digitalWrite(motorIN1, LOW);  digitalWrite(motorIN2, LOW);  Serial.println("[Motor] STOP"); }
 
 bool motorRunning = false;
 unsigned long motorStartTime = 0;
@@ -78,17 +81,19 @@ unsigned long motorStartTime = 0;
 void dispenseAction() {
   Serial.println("\n[!] Memberi makan...");
   digitalWrite(statusLedPin, LOW);
-  nyalakanMotor();
+
+  // Putar maju untuk menjatuhkan pakan
+  motorMaju();
   motorRunning = true;
   motorStartTime = millis();
 
-  // Non-blocking: tunggu motor selesai sambil tetap melayani WiFi & kamera
+  // Non-blocking: tunggu motor selesai
   while (millis() - motorStartTime < (unsigned long)dispenseDuration) {
-    ArduinoOTA.handle();  // OTA tetap jalan
-    delay(10);            // yield ke WiFi stack agar tidak disconnect
+    ArduinoOTA.handle();
+    vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 
-  matikanMotor();
+  motorBerhenti();
   motorRunning = false;
   digitalWrite(statusLedPin, HIGH);
   Serial.println("[!] Selesai\n");
@@ -186,7 +191,10 @@ void checkAndExecuteSchedule() {
 }
 
 void setup() {
-  matikanMotor();
+  // Inisialisasi pin L298N Mini Motor Driver
+  pinMode(motorIN1, OUTPUT); pinMode(motorIN2, OUTPUT);
+  motorBerhenti(); // Pastikan motor mati saat boot
+  
   pinMode(flashLedPin, OUTPUT); pinMode(statusLedPin, OUTPUT);
   digitalWrite(flashLedPin, LOW); digitalWrite(statusLedPin, LOW);
   Serial.begin(115200);
@@ -199,9 +207,37 @@ void setup() {
   config.pin_xclk=XCLK_GPIO_NUM; config.pin_pclk=PCLK_GPIO_NUM; config.pin_vsync=VSYNC_GPIO_NUM; config.pin_href=HREF_GPIO_NUM;
   config.pin_sccb_sda=SIOD_GPIO_NUM; config.pin_sccb_scl=SIOC_GPIO_NUM; config.pin_pwdn=PWDN_GPIO_NUM; config.pin_reset=RESET_GPIO_NUM;
   config.xclk_freq_hz=20000000; config.pixel_format=PIXFORMAT_JPEG; config.grab_mode=CAMERA_GRAB_LATEST;
-  if (psramFound()) { Serial.println("[OK] PSRAM"); config.frame_size=FRAMESIZE_CIF; config.jpeg_quality=12; config.fb_count=2; config.fb_location=CAMERA_FB_IN_PSRAM; }
-  else { Serial.println("[WARN] No PSRAM"); config.frame_size=FRAMESIZE_QVGA; config.jpeg_quality=15; config.fb_count=1; config.fb_location=CAMERA_FB_IN_DRAM; }
-  if (esp_camera_init(&config) != ESP_OK) Serial.println("[!] Camera init failed");
+  
+  // Manajemen alokasi PSRAM untuk resolusi & buffer sesuai kode baru
+  if (psramFound()) { 
+    Serial.println("[OK] PSRAM"); 
+    // SOLUSI FPS & KUALITAS: Ubah ke VGA (640x480) dengan kompresi 12.
+    // Ini adalah titik tengah terbaik antara gambar jernih dan kelancaran stream (FPS).
+    config.frame_size=FRAMESIZE_VGA; 
+    config.jpeg_quality=12;          
+    config.fb_count=2;               
+    config.fb_location=CAMERA_FB_IN_PSRAM; 
+  } else { 
+    Serial.println("[WARN] No PSRAM"); 
+    config.frame_size=FRAMESIZE_SVGA; 
+    config.jpeg_quality=12; 
+    config.fb_count=1; 
+    config.fb_location=CAMERA_FB_IN_DRAM; 
+  }
+  
+  if (esp_camera_init(&config) != ESP_OK) {
+    Serial.println("[!] Camera init failed");
+  } else {
+    // Setel sensor ke warna netral alami (tidak terlalu gelap, tidak terlalu terang)
+    sensor_t * s = esp_camera_sensor_get();
+    s->set_brightness(s, 0);     // Normal (0)
+    s->set_contrast(s, 0);       // Normal (0)
+    s->set_saturation(s, 0);     // Normal (0)
+    
+    // Kembalikan exposure dan gain ke mode otomatis pabrik
+    s->set_ae_level(s, 0);       
+    s->set_gainceiling(s, (gainceiling_t)0);
+  }
 
   // WiFi
   Serial.print("[WiFi] Connecting "); Serial.println(ssid);
@@ -242,24 +278,45 @@ void setup() {
     Firebase.RTDB.setString(&fbdo, "/aquafeed/stream_url", streamUrl);
     Serial.printf("[Auto-IP] Published: %s\n", streamUrl.c_str());
   }
+
+  // Bersihkan command lama di Firebase agar motor tidak langsung jalan saat restart
+  if (Firebase.ready() && signupOK) {
+    Firebase.RTDB.setString(&fbdo, "/aquafeed/command/action", "idle");
+    Serial.println("[Guard] Cleared stale command");
+  }
+
+  // Tunggu 3 detik setelah boot sebelum mengizinkan motor berputar
+  // Ini mencegah lonjakan sinyal GPIO 15 saat boot menyebabkan motor kedut
+  delay(3000);
+  bootReady = true;
+  Serial.println("[Guard] Motor unlocked - system ready");
 }
 
 void loop() {
   ArduinoOTA.handle();
   if (Firebase.ready() && signupOK) {
-    if (millis() - lastPingMillis > 5000) { lastPingMillis = millis(); Firebase.RTDB.setString(&fbdo, "/aquafeed/device_status", "Online"); Firebase.RTDB.setInt(&fbdo, "/aquafeed/last_ping", millis()); }
-    // Action command
-    if (Firebase.RTDB.getString(&fbdo, "/aquafeed/command/action") && fbdo.stringData() == "dispense") {
-      Firebase.RTDB.setString(&fbdo, "/aquafeed/command/action", "idle"); dispenseAction();
+    if (millis() - lastPingMillis > 5000) { 
+      lastPingMillis = millis(); 
+      Firebase.RTDB.setString(&fbdo, "/aquafeed/device_status", "Online"); 
+      Firebase.RTDB.setInt(&fbdo, "/aquafeed/last_ping", millis()); 
     }
+    
+    // Action command (hanya diproses jika bootReady = true)
+    if (bootReady && Firebase.RTDB.getString(&fbdo, "/aquafeed/command/action") && fbdo.stringData() == "dispense") {
+      Firebase.RTDB.setString(&fbdo, "/aquafeed/command/action", "idle"); 
+      dispenseAction();
+    }
+    
     // Flash command
     if (Firebase.RTDB.getString(&fbdo, "/aquafeed/command/flash")) {
       String cmd = fbdo.stringData();
       if (cmd == "on") digitalWrite(flashLedPin, HIGH);
       else if (cmd == "off") digitalWrite(flashLedPin, LOW);
     }
+    
     // Automatic schedule
     checkAndExecuteSchedule();
   }
-  delay(50);
+  
+  vTaskDelay(50 / portTICK_PERIOD_MS); 
 }

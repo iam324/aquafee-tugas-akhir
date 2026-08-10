@@ -10,6 +10,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../theme.dart';
 import 'glass_card.dart';
+import '../providers/food_detection_provider.dart';
 
 final GlobalKey<LiveCameraCardState> liveCameraKey = GlobalKey<LiveCameraCardState>();
 
@@ -28,6 +29,8 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
   bool _isLive = true;
   String _streamUrl = 'http://10.184.111.136:81/stream';
   StreamSubscription? _firebaseUrlSub;
+
+  bool _isRetrying = false;
 
   final GlobalKey _repaintKey = GlobalKey();
 
@@ -100,6 +103,17 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
     setState(() => _isLive = false);
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) setState(() => _isLive = true);
+    });
+  }
+
+  void _triggerAutoReconnect() {
+    if (_isRetrying) return;
+    _isRetrying = true;
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        refreshStream();
+      }
+      _isRetrying = false;
     });
   }
 
@@ -211,11 +225,21 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
   }
 
   Widget _buildControls() {
+    final detectionState = ref.watch(foodDetectionProvider);
+
     return Positioned(
       top: 12,
       right: 12,
       child: Row(
         children: [
+          _ControlButton(
+            icon: Icons.search_rounded,
+            isLoading: detectionState.isAnalyzing,
+            onTap: detectionState.isAnalyzing 
+                ? null 
+                : () => ref.read(foodDetectionProvider.notifier).detectNow(),
+          ),
+          const SizedBox(width: 8),
           _ControlButton(
             icon: _isLive ? Icons.pause_rounded : Icons.play_arrow_rounded,
             onTap: () => setState(() => _isLive = !_isLive),
@@ -231,6 +255,11 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
   }
 
   Widget _buildErrorState() {
+    // Jalankan auto-reconnect secara diam-diam setelah 3 detik
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _triggerAutoReconnect();
+    });
+
     return Container(
       color: AppTheme.colors.background,
       padding: const EdgeInsets.all(24),
@@ -332,8 +361,9 @@ class LiveCameraCardState extends ConsumerState<LiveCameraCard> {
 
 class _ControlButton extends StatelessWidget {
   final IconData icon;
-  final VoidCallback onTap;
-  const _ControlButton({required this.icon, required this.onTap});
+  final VoidCallback? onTap;
+  final bool isLoading;
+  const _ControlButton({required this.icon, this.onTap, this.isLoading = false});
 
   @override
   Widget build(BuildContext context) {
@@ -346,7 +376,12 @@ class _ControlButton extends StatelessWidget {
           color: Colors.black.withAlpha((255 * 0.5).round()),
           borderRadius: BorderRadius.circular(18),
         ),
-        child: Icon(icon, color: Colors.white, size: 18),
+        child: isLoading 
+            ? const Padding(
+                padding: EdgeInsets.all(10.0),
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+              )
+            : Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }

@@ -1,125 +1,90 @@
-# 📘 Penjelasan Proyek AquaFeed untuk Tugas Akhir (Final Update)
+# 📘 Dokumentasi Teknis & Penjelasan Sistem "AquaFeed" (Untuk Sidang Tugas Akhir)
 
-Dokumen ini berisi penjelasan mendalam mengenai arsitektur, fitur, hardware, dan struktur kode proyek **AquaFeed**. Gunakan dokumen ini sebagai referensi utama untuk memahami ekosistem sistem IoT ini secara keseluruhan. Pembaruan terakhir ini mencakup penghapusan fitur AI untuk stabilitas, penambahan sistem jadwal mandiri, dan perbaikan performa streaming.
-
----
-
-## 1. Konsep Utama Proyek (Architectural Overview)
-
-Proyek ini adalah sistem **Smart Fish Feeder & Live Monitor** berbasis IoT yang menghubungkan perangkat keras (Hardware) dengan aplikasi mobile secara *real-time*, dengan fokus pada keandalan operasional (*reliability*) dan efisiensi memori.
-
-*   **Framework Aplikasi**: Flutter (Dart) dengan arsitektur **Clean UI & Responsive Layout**.
-*   **State Management**: **Riverpod (versi 2.6.x)**. Memastikan aliran data yang *type-safe* dan reaktif di seluruh aplikasi.
-*   **Backend & Jembatan Komunikasi**: **Firebase Realtime Database (RTDB)**. Digunakan untuk sinkronisasi perintah (*command*), jadwal otomatis, dan pelaporan IP perangkat secara *real-time*.
-*   **Hardware Core**: **ESP32-CAM (AI-Thinker Model)**. Menangani penyiaran video streaming MJPEG, penjadwalan mandiri via NTP, dan kontrol motor DC.
-*   **Aktuator Pakan**: **Motor DC 5V** yang dikontrol secara presisi via **Single Pin GPIO 15** menggunakan **Rangkaian Transistor Driver + Dioda Proteksi** dengan **Teknik High-Impedance**.
-*   **Theme & UI**: Sistem **Dynamic Theme** (Teal Dark, Pink Light, Ocean Light) yang bisa diubah *on-the-fly* lewat menu Appearance.
+Dokumen ini merupakan referensi akademis dan teknis yang sangat mendalam mengenai arsitektur, algoritma, serta keputusan rekayasa perangkat lunak (*software engineering*) dan perangkat keras (*hardware*) dari proyek **AquaFeed - Smart Fish Feeder & AI-Based Live Monitor**.
 
 ---
 
-## 2. Fitur Utama & Penjelasan Teknis
+## 1. Arsitektur Sistem (System Architecture)
 
-### A. Real-Time Camera Stream & True-Live Floating Mini Player (PiP)
-*   **Fungsi**: Memantau kondisi fisik kolam secara *live video streaming* tanpa terputus.
-*   **Teknis**: 
-    *   **Auto-IP Publish**: Setiap kali menyala, ESP32-CAM secara otomatis mengirimkan IP Address lokalnya (contoh: `http://192.168.x.x:81/stream`) ke Firebase RTDB. Aplikasi Flutter secara dinamis mendengarkan (*listen*) perubahan URL ini, sehingga pengguna tidak perlu lagi mengetik IP manual saat router berubah.
-    *   **True-Live Floating Mini Player**: Saat pengguna melakukan *scroll* ke bawah, jendela video mini otomatis muncul di pojok kanan bawah. Karena ESP32-CAM hanya mampu melayani **1 koneksi stream**, aplikasi dirancang dengan logika *Single-Stream Takeover*: Kamera utama di-*pause* dan koneksinya dipindahkan secara mulus ke Mini Player, memastikan video tetap **LIVE** tanpa membuat sistem ESP32 *crash* atau terbebani.
+Proyek ini menggunakan pendekatan arsitektur **Terdistribusi (Distributed Architecture)** di mana beban komputasi dibagi secara presisi antara mikrokontroler (Edge) dan perangkat *mobile* (Client).
 
-### B. Independent Smart Schedule System (Jadwal Mandiri ESP32)
-*   **Fungsi**: Memberi makan ikan secara otomatis sesuai jam yang ditentukan, terlepas dari apakah aplikasi HP sedang dibuka, ditutup, atau bahkan di-*uninstall*.
-*   **Teknis**:
-    *   **NTP Time Sync**: Saat *boot*, ESP32-CAM terhubung ke server `pool.ntp.org` untuk mensinkronisasi jam internalnya ke zona waktu GMT+7.
-    *   **Firebase JSON Polling**: ESP32 secara rutin membaca daftar jadwal (array JSON) dari `/aquafeed/schedule` di Firebase RTDB.
-    *   **Autonomous Execution**: Ketika waktu internal ESP32 cocok dengan waktu jadwal, alat akan langsung memutar motor dan mengirim *Activity Log* kembali ke Firebase secara mandiri tanpa campur tangan HP.
-
-### C. Non-Blocking Motor Driver & High-Impedance Zero-Leakage
-*   **Fungsi**: Menggerakkan Motor DC 5V pemutar pakan dengan aman tanpa memutus koneksi Wi-Fi.
-*   **Teknis (Non-Blocking Loop)**: Putaran motor tidak lagi menggunakan fungsi `delay()` yang membekukan mikrokontroler. Digunakan loop `while(millis())` sambil memanggil `ArduinoOTA.handle()` dan `delay(10)`. Ini memastikan **sistem anti-hang**; Wi-Fi, OTA, dan Streaming Kamera tetap hidup meskipun motor sedang menyala.
-*   **Standby High-Z**: Saat tidak aktif, pin motor (GPIO 15) dialihkan ke mode `INPUT` (High-Impedance) untuk memutus arus bocor hingga 0.000 mA. Saat aktif, pin diubah ke `OUTPUT` dan ditarik `LOW`.
-
-### D. Wireless Firmware Update (ArduinoOTA)
-*   **Fungsi**: Memungkinkan pengunggahan program baru ke ESP32-CAM secara nirkabel (wireless via Wi-Fi) dari Arduino IDE tanpa perlu kabel FTDI.
+*   **Microcontroller (Edge Device)**: **ESP32-CAM (AI-Thinker Model)**. Dioptimalkan menggunakan arsitektur **FreeRTOS (Real-Time Operating System)** untuk manajemen *Dual-Core*.
+*   **Backend & Jembatan Komunikasi**: **Firebase Realtime Database (RTDB)**. Berfungsi sebagai *Message Broker* untuk perintah (*command*), penjadwalan (*scheduling*), status perangkat, dan *Auto-IP Discovery*.
+*   **Aplikasi Mobile (Client)**: Dibangun menggunakan **Flutter (Dart)** dengan state management **Riverpod**. Aplikasi tidak hanya bertindak sebagai *remote control*, tetapi juga memikul beban berat komputasi Kecerdasan Buatan (AI) untuk pengolahan citra (*Image Processing*).
+*   **Aktuator Elektromekanis**: **Motor DC 5V** yang dikendalikan melalui pin **GPIO 15** dengan rangkaian penguat arus (*Transistor Driver*) berlapis Dioda Flyback.
 
 ---
 
-## 3. Spesifikasi Perangkat Keras & Rangkaian (Hardware Setup)
+## 2. Inovasi Utama & Penyelesaian Masalah (Engineering Solutions)
 
-### A. Komponen Hardware Utama
-1. **ESP32-CAM (AI-Thinker Model)**: Otak utama mikrokontroler & pemroses kamera.
-2. **Motor DC 5V (Gearbox)**: Penggerak mekanis pemutar pakan (Drum feeder mechanism).
-3. **Transistor (NPN / MOSFET)**: Saklar elektronik penguat arus motor.
-4. **Dioda Proteksi (Flyback Diode 1N4007)**: Pelindung ESP32-CAM dari lonjakan tegangan balik motor.
-5. **Sumber Daya 5V / 2A+**: Adaptor eksternal berdaya tinggi (sangat diwajibkan agar koneksi Wi-Fi tidak drop saat motor berputar).
+Sistem ini telah melewati berbagai tahap optimalisasi kelas industri untuk mengatasi kelemahan bawaan (keterbatasan memori dan *bandwidth*) pada ESP32-CAM. Berikut adalah rincian mendalam fitur inovatifnya:
 
-### B. Skema Rangkaian Pin (Wiring Diagram Transistor Driver)
+### A. AI Color-Based Food Detection & Coverage Analysis (Kecerdasan Buatan di Sisi Klien)
+Mendeteksi sisa pakan di dalam air bukanlah hal mudah karena air kolam seringkali keruh atau gelap. AI pada proyek ini menggunakan metode **Computer Vision** yang dirancang khusus (Custom Algorithm):
+1.  **Region of Interest (ROI) Cropping**: AI secara otomatis membuang 15% area pinggiran gambar (atas, bawah, kiri, kanan). Hal ini mengeleminasi *noise* berupa tembok wadah, bayangan sudut, atau mesin filter yang sering disalahartikan sebagai pakan. AI murni hanya memindai area tengah air.
+2.  **Color-Pigment Thresholding**: Berbeda dengan algoritma kuno yang mencari noda gelap (*grayscale*), AI ini membedah setiap piksel gambar ke dalam struktur RGB (Red, Green, Blue). AI diprogram secara spesifik untuk mencari pelet dengan pigmen dominan **Merah/Pink** (`R > G + 20 && R > B + 20`) dan **Hijau Terang** (`G > R + 15 && G > B + 15`). Ini membuat AI sangat tahan terhadap air kolam yang gelap atau kusam, karena air kusam tidak memiliki pigmen cerah.
+3.  **Blob Counting vs Coverage Percentage**: Jika sisa pakan sedikit (misal 5 butir), AI akan menghitung gumpalan (*Blob Counting*). Namun, jika pakan **menumpuk sangat banyak (menyerupai karpet)**, algoritma blob akan gagal karena menganggapnya sebagai 1 objek raksasa. Untuk mengatasinya, AI mengkalkulasi **Coverage Percentage (Persentase Luas Area)**. Jika area yang tertutup warna pelet > 15%, sistem langsung membunyikan alarm "Menumpuk Sangat Banyak".
+4.  **Isolate Processing**: Agar aplikasi tidak macet (*freeze*) saat melakukan perulangan matematika pada jutaan piksel, seluruh perhitungan AI dipindahkan ke **Isolate (Thread terpisah dari UI utama)** pada perangkat HP.
+
+### B. FreeRTOS Dual-Core Load Balancing
+ESP32 memiliki dua otak (Core 0 dan Core 1), namun pengaturan bawaan sering menumpuk semua tugas di satu Core. Proyek ini membelah tugas secara paksa:
+*   **Core 0**: Didedikasikan 100% secara eksklusif untuk menjalankan Server HTTP guna menangani *streaming video (MJPEG)*.
+*   **Core 1 (Feeder Task)**: Menjalankan *Task* mandiri (`xTaskCreatePinnedToCore`) berkapasitas memori besar (8192 Bytes). Tugas ini menangani sinkronisasi Firebase, mengecek jam internet (NTP), fitur OTA Update, dan menjalankan motor. Dengan pemisahan ini, video tidak akan putus saat alat sedang menjatuhkan pakan, dan alat tidak akan hang.
+
+### C. Watchdog Optimization & Extreme Bandwidth Compression
+ESP32-CAM rentan mengalami *Hardware Watchdog Reset* (alat mati dan *restart* sendiri) jika *bandwidth* Wi-Fi melemah atau kepanasan. Solusi yang diterapkan:
+1.  **Resolusi QVGA + Kompresi Agresif**: Resolusi kamera diturunkan menjadi **320x240 (QVGA)** dengan tingkat kualitas kompresi JPEG ditingkatkan ke **angka 20**. Ini membuat ukuran data video menjadi **super kecil**, sehingga jaringan Wi-Fi selemah apa pun sanggup memutar video pada **30 FPS (sangat mulus tanpa patah-patah)**.
+2.  **Delay Yielding**: Disematkan `vTaskDelay(1)` pada loop pemompaan frame kamera untuk memberikan 1 milidetik waktu bernapas bagi modul Wi-Fi dan sistem keamanan mikrokontroler (Watchdog).
+
+### D. Anti-Spam Memory Lock (Pencegah Crash DMA)
+Kamera ESP32-CAM mengirimkan gambar utuh (*Full JPEG*). Jika *user* menekan tombol deteksi pakan berkali-kali secara brutal, ESP32 akan kehabisan RAM (*DMA Memory Exhaustion*) karena dipaksa melayani banyak request bersamaan, yang berujung pada alat terputus (*disconnect*).
+*   **Solusi**: Diimplementasikan *State Lock* pada aplikasi Flutter. Saat tombol deteksi ditekan, tombol langsung berubah menjadi *Loading Spinner* dan **dikunci secara fisik** hingga AI selesai menganalisis. Ini melindungi ESP32 dari pemboman *request*.
+
+### E. Silent Auto-Reconnect Stream
+Jika video tiba-tiba putus (*drop*) karena gangguan sesaat pada sinyal Wi-Fi, aplikasi tidak lagi macet di layar putih. Sistem *Error Builder* di Flutter akan mendeteksinya, kemudian memicu fungsi *Silent Auto-Reconnect* setiap 3 detik secara diam-diam di latar belakang hingga koneksi video pulih kembali tanpa menyusahkan pengguna.
+
+### F. Independent Smart Schedule System (NTP & Firebase)
+Pemberian pakan otomatis tidak bergantung pada HP. Saat ESP32 menyala, ia mengambil jam atom dari server `pool.ntp.org` (WIB GMT+7). Ia mengunduh array jadwal dari Firebase dan mengeksekusinya secara absolut. Jika waktu cocok, alat menumpahkan pakan dan mengirimkan histori/log aktivitas kembali ke Firebase. Walaupun HP dimatikan, sistem penjadwalan ini tetap berjalan mandiri di dalam mikrokontroler.
+
+### G. Non-Blocking Motor (High-Impedance Zero-Leakage)
+*   **Non-Blocking**: Putaran motor tidak menggunakan fungsi usang `delay()` yang membekukan sistem. Digunakan *Yielding While-Loop* `vTaskDelay` sehingga jadwal dan koneksi Wi-Fi tidak *timeout*.
+*   **High-Z State**: Saat motor diam (idle), pin mikrokontroler (GPIO 15) diubah ke mode `INPUT`. Ini memutus aliran listrik secara sempurna (*High-Impedance*), memastikan tidak ada satu mili-Ampere pun arus bocor yang masuk ke Transistor yang berisiko membuat motor berdengung atau panas.
+
+---
+
+## 3. Skema Perangkat Keras & Kelistrikan (Hardware Wiring)
+
+Aliran daya sangat krusial. Motor DC menarik arus yang kuat (Spike Current) yang bisa menyebabkan *Voltage Drop*, membuat ESP32 merestart sistem Wi-Fi nya. Oleh karena itu digunakan **Adaptor Eksternal 5V berdaya tinggi (Minimal 2 Ampere)** dengan skema proteksi sbb:
 
 ```text
  ┌────────────────────────────────────────────────────────────────────────┐
  |                            ESP32-CAM BOARD                             |
  ├────────────────────────────────────────────────────────────────────────┤
- |  Pin 5V ───────────────────────────────────┬─────► Kabel MERAH Motor (+)
+ |  Pin 5V (Tegangan Utama) ──────────────────┬─────► Kabel MERAH Motor (+)
  |                                            |                           |
  |                                          [DIODA 1N4007]                |
- |                                            | (Dipasang Anoda-Katoda    |
- |  Pin 15 (GPIO 15) ──► Kaki Base Transistor │  Paralel Motor)           |
- |                             │              |                           |
- |                             ▼              ├─────► Kabel PUTIH Motor (-)
- |                    [TRANSISTOR DRIVER] ────┘                           |
+ |  Pin 15 (Sinyal/Trigger) ─► Kaki BASE      | (Dipasang arah terbalik   |
+ |                             Transistor     |  / paralel dengan Motor   |
+ |                             │              |  sebagai penahan arus     |
+ |                             ▼              |  balik/Flyback)           |
+ |                    [TRANSISTOR NPN] ───────┼─────► Kabel PUTIH Motor (-)
  |                             │                                          |
- |  Pin GND ───────────────────┴────────────────────► Ke GND Catu Daya    |
+ |  Pin GND (Massa) ───────────┴────────────────────► Ke GND (Massa)      |
  └────────────────────────────────────────────────────────────────────────┘
 ```
+**Peran Dioda Flyback**: Saat motor berhenti, kumparan dinamo menghasilkan tendangan tegangan mundur (*Back EMF*) yang bisa merusak mikrokontroler. Dioda ini membuang tegangan liar tersebut.
 
 ---
 
-## 4. Struktur Database & Backend (Firebase RTDB)
+## 4. Alur Kerja (Workflow) Sistem AI Deteksi Pakan
 
-*   `/aquafeed/stream_url`: URL dinamis (Auto-IP) yang dikirim oleh ESP32.
-*   `/aquafeed/command/action`: Menerima instruksi manual (`"dispense"` atau `"idle"`).
-*   `/aquafeed/device_status`: Menyimpan status konektivitas perangkat (`"Online"` / `"Offline"`).
-*   `/aquafeed/last_ping`: Stempel waktu (*timestamp/millis*) ping aktif perangkat.
-*   `/aquafeed/schedule`: Array JSON berisi daftar jadwal otomatis (time, dosage, active).
-*   `/aquafeed/logs/`: Menyimpan histori/riwayat pemberian pakan otomatis maupun manual.
-
----
-
-## 5. Struktur Folder Kode (Clean Code Standard)
-
-```text
-f:\TA\aquafeed\
-├── esp32_firmware/
-│   └── feeder_esp32/
-│       ├── feeder_esp32.ino        # Firmware ESP32 (Firebase Auto-IP, Non-blocking Motor, OTA, NTP Schedule)
-│       └── app_httpd.cpp           # Server HTTP streaming MJPEG
-├── lib/
-│   ├── main.dart                   # Entry point aplikasi & Theme Provider Scope
-│   ├── home_screen.dart            # Halaman utama (Stack Scroll & True-Live Mini Player)
-│   ├── theme.dart                  # Sistem Warna Dinamis (Teal Dark, Pink Light, Ocean Light)
-│   ├── providers/                  # Business Logic Layer
-│   │   ├── theme_provider.dart     # Pengelola perubahan tema UI
-│   │   ├── feed_provider.dart      # Pengelola perintah pakan manual
-│   │   ├── device_provider.dart    # Pengelola status online/offline
-│   │   └── log_provider.dart       # Pengelola riwayat log
-│   ├── screens/                    
-│   │   └── settings_screen.dart    # Menu Appearance (Pemilihan Tema Aplikasi)
-│   └── widgets/                    # UI Component Layer
-│       ├── live_camera_card.dart   # Live Stream MJPEG Card
-│       ├── feeding_control.dart    # Panel Kontrol & Tombol Beri Pakan
-│       ├── custom_header.dart      # Header Status Sistem & Notifikasi
-│       ├── schedule_card.dart      # Editor Daftar Jadwal Pakan
-│       └── activity_log.dart       # Daftar Riwayat Log Pakan
-└── PENJELASAN_PROYEK.md            # Dokumentasi utama proyek
-```
-
----
-
-## 6. Keputusan Rekayasa Utama (Engineering Decisions)
-
-1. **Penghapusan AI untuk Skalabilitas Memori & Performa Jaringan**: 
-   Awalnya terdapat Computer Vision. Dihapus secara total demi memfokuskan ESP32-CAM murni pada stabilitas MJPEG Stream dan sistem *scheduling*, mengatasi masalah memori (*hang*) karena *overload HTTP request* beruntun.
-2. **Sistem Motor Non-Blocking (Anti-Hang)**: 
-   Fungsi `delay()` yang sebelumnya membekukan *chip* selama motor berputar telah diganti dengan *Yielding While-Loop* `delay(10)`. Hasilnya, koneksi Wi-Fi Firebase dan video stream tidak terputus (*disconnect*) saat pemberian pakan berlangsung.
-3. **Single-Stream Takeover pada UI**: 
-   Karena keterbatasan koneksi ESP32 (1 klien), UI Flutter dirancang untuk melepas koneksi kamera utama saat fitur *Floating Player* aktif, lalu meresume-nya secara otomatis. Ini menghilangkan kebutuhan request ganda (*dual-stream*) yang selalu membuat ESP32 lumpuh.
-4. **Auto-IP Firebase Mechanism**: 
-   Menggunakan Firebase RTDB sebagai jembatan *service discovery*. Setiap terkoneksi Wi-Fi baru, ESP32 meletakkan IP-nya di database sehingga Flutter *app* tidak pernah kehilangan jejak lokasi stream kamera.
+1.  **Pemicu**: Fitur AI dipicu secara otomatis dari dalam aplikasi *background* (berdasarkan perulangan Timer **6 jam sekali**) atau secara **Manual** lewat sentuhan ikon kaca pembesar.
+2.  **Frame Extraction**: Aplikasi tidak merepotkan ESP32 untuk mengambil foto baru. Aplikasi mengambil *snapshot* (tangkapan layar digital) langsung dari aliran video (*live stream*) yang sudah berjalan di UI.
+3.  **Color Filtering & Masking**: Gambar masuk ke pemrosesan matriks *Isolate*. Tepi gambar dibuang (ROI). Setiap sisa piksel dievaluasi warnanya (Merah/Hijau/Gelap). Piksel yang lolos uji warna ditandai (*Masking = True*).
+4.  **Blob Detection (DFS)**: Algoritma *Depth-First Search* menelusuri piksel-piksel yang bersentuhan untuk membentuk kelompok objek (Pelet).
+5.  **Status Determination**:
+    *   Jika Butir Pelet <= 2 dan *Coverage Area* < 1.5% ➔ **Kosong / Makanan Habis**
+    *   Jika *Coverage Area* < 5.0% ➔ **Sisa Sedikit**
+    *   Jika *Coverage Area* 5.0% - 15.0% ➔ **Sisa Sedang (Tunda Makan)**
+    *   Jika *Coverage Area* > 15.0% ➔ **Pakan Menumpuk Sangat Banyak (Bahaya Air Keruh)**
+6.  **Visualisasi**: Mengembalikan data hasil AI ke state `Riverpod`, membuka gembok pelindung tombol (*loading spinner*), dan menampilkan hasil status di aplikasi.

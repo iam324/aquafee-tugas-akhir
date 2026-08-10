@@ -84,61 +84,86 @@ class FoodDetectionService {
         (_) => List.filled(resized.width, false),
       );
 
-      for (int y = 0; y < resized.height; y++) {
-        for (int x = 0; x < resized.width; x++) {
+      // --- Tentukan Region of Interest (ROI) ---
+      // Abaikan pinggiran gambar (tembok akuarium, mesin, benda di luar air)
+      // Kita hanya fokus pada 70% area tengah gambar.
+      final int startX = (resized.width * 0.15).toInt();
+      final int endX = (resized.width * 0.85).toInt();
+      final int startY = (resized.height * 0.15).toInt();
+      final int endY = (resized.height * 0.85).toInt();
+      final int roiPixels = (endX - startX) * (endY - startY);
+
+      // Hitung rata-rata kecerahan gambar HANYA di area ROI (dihapus karena kita ganti ke deteksi warna)
+      // Kita langsung memindai setiap piksel berdasarkan pigmen warna (Merah/Pink & Hijau)
+
+      for (int y = startY; y < endY; y++) {
+        for (int x = startX; x < endX; x++) {
           final pixel = resized.getPixel(x, y);
           final r = pixel.r.toInt();
           final g = pixel.g.toInt();
           final b = pixel.b.toInt();
 
-          // Deteksi warna pelet pakan ikan (Coklat / Tan / Coklat Keemasan)
-          // R > G > B, dengan tingkat kecerahan sedang dan r > 50
-          final isBrownPellet = (r > 40 && r < 180) &&
-              (g > 25 && g < 130) &&
-              (b > 10 && b < 100) &&
-              (r > g + 10) && // Komponen merah lebih dominan dari hijau
-              (g >= b);       // Komponen hijau lebih dari atau sama dengan biru
+          // DETEKSI WARNA (COLOR-BASED DETECTION)
+          // Pelet baru berwarna Merah/Pink dan Hijau cerah.
+          // Dasar air yang kosong berwarna kusam/abu-abu/hijau gelap kotor.
+          
+          // 1. Pelet Merah/Pink: Unsur Merah (R) sangat dominan menonjol
+          bool isReddish = r > (g + 20) && r > (b + 20);
+          
+          // 2. Pelet Hijau Cerah: Unsur Hijau (G) sangat menonjol dibanding Merah dan Biru
+          bool isGreenish = g > (r + 15) && g > (b + 15) && g > 80;
+          
+          // 3. Syarat Kecerahan: Harus cukup terang, bukan cuma bayangan gelap di air
+          bool isBrightEnough = (r + g + b) > 120;
 
-          if (isBrownPellet) {
+          if ((isReddish || isGreenish) && isBrightEnough) {
             pelletPixels++;
             mask[y][x] = true;
           }
         }
       }
 
-      // Hitung kluster / butir pelet (Blob Counting sederhana)
+      // Hitung kluster / butir pelet (Blob Counting)
       int detectedBlobs = 0;
+      int validPellets = 0; // Hanya menghitung gumpalan seukuran pelet
       final visited = List.generate(
         resized.height,
         (_) => List.filled(resized.width, false),
       );
 
-      for (int y = 0; y < resized.height; y++) {
-        for (int x = 0; x < resized.width; x++) {
+      for (int y = startY; y < endY; y++) {
+        for (int x = startX; x < endX; x++) {
           if (mask[y][x] && !visited[y][x]) {
             int blobSize = _exploreBlob(mask, visited, x, y, resized.width, resized.height);
-            // Hanya hitung kluster jika ukurannya minimal 2-30 piksel (ukuran 1 butir pelet di resolusi ini)
-            if (blobSize >= 2) {
-              detectedBlobs++;
+            if (blobSize >= 1) detectedBlobs++;
+            
+            // Filter ukuran butir
+            if (blobSize >= 2 && blobSize <= 40) {
+              validPellets++;
             }
           }
         }
       }
 
-      final coveragePercent = (pelletPixels / totalPixels) * 100.0;
+      final coveragePercent = (pelletPixels / roiPixels) * 100.0;
 
       FoodResidualStatus status;
       String statusLabel;
       String recommendation;
 
-      if (detectedBlobs == 0 && coveragePercent < 0.2) {
+      // Status: Dikatakan habis jika bola-bola (validPellets) sangat sedikit (<= 2)
+      // DAN area yang tertutup pelet sangat kecil (< 1.5%).
+      // (Syarat area < 1.5% penting karena jika pelet menumpuk seperti karpet, 
+      // blob size akan raksasa sehingga validPellets = 0, padahal aslinya makanan penuh!)
+      
+      if (validPellets <= 2 && coveragePercent < 1.5) {
         status = FoodResidualStatus.empty;
-        statusLabel = 'Pakan Habis';
-        recommendation = 'Pakan di kolam sudah bersih. Aman memberi pakan.';
+        statusLabel = 'Makanan Habis';
+        recommendation = 'Air bersih. Silakan beri pakan.';
       } else {
         status = FoodResidualStatus.high;
         statusLabel = 'Pakan Terdeteksi';
-        recommendation = '⚠️ Pakan masih ada di permukaan. Tunda pemberian pakan berikutnya.';
+        recommendation = 'Sisa pakan masih ada. Tunda pemberian makan.';
       }
 
       return FoodDetectionResult(

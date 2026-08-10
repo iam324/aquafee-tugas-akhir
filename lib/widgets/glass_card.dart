@@ -41,15 +41,7 @@ class GlassCard extends StatelessWidget {
           child: Container(
             padding: padding,
             decoration: BoxDecoration(
-              color: AppTheme.colors.surface.withAlpha((255 * 0.85).round()),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppTheme.colors.surfaceLight.withAlpha((255 * 0.6).round()),
-                  AppTheme.colors.surface.withAlpha((255 * 0.9).round()),
-                ],
-              ),
+              color: AppTheme.colors.surface,
               borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
               border: Border.all(
                 color: Colors.white.withAlpha((255 * 0.1).round()),

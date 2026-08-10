@@ -1,7 +1,6 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../services/food_detection_service.dart';
 import '../widgets/live_camera_card.dart';
 
@@ -15,7 +14,7 @@ class FoodDetectionState {
     required this.lastResult,
     this.isAnalyzing = false,
     this.errorMessage,
-    this.statusMessage = 'Mendeteksi otomatis (setiap 10s)',
+    this.statusMessage = 'Mendeteksi otomatis (setiap 6 jam)',
   });
 
   FoodDetectionState copyWith({
@@ -34,13 +33,10 @@ class FoodDetectionState {
 }
 
 class FoodDetectionNotifier extends Notifier<FoodDetectionState> {
-  final FoodDetectionService _service = FoodDetectionService();
-  String _streamUrl = '';
   Timer? _autoScanTimer;
 
   @override
   FoodDetectionState build() {
-    _loadStreamUrl();
     _startAutoScan();
 
     ref.onDispose(() {
@@ -52,15 +48,7 @@ class FoodDetectionNotifier extends Notifier<FoodDetectionState> {
     );
   }
 
-  Future<void> _loadStreamUrl() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      _streamUrl = prefs.getString('esp32_stream_url') ??
-          'http://10.184.111.136:81/stream';
-    } catch (_) {}
-  }
-
-  /// Mulai scan otomatis setiap 10 detik
+  /// Mulai scan otomatis setiap 6 jam
   void _startAutoScan() {
     _autoScanTimer?.cancel();
 
@@ -69,8 +57,8 @@ class FoodDetectionNotifier extends Notifier<FoodDetectionState> {
       detectNow();
     });
 
-    // Kemudian ulang otomatis setiap 15 detik
-    _autoScanTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+    // Kemudian ulang otomatis setiap 6 jam
+    _autoScanTimer = Timer.periodic(const Duration(hours: 6), (_) {
       detectNow();
     });
   }
@@ -102,12 +90,16 @@ class FoodDetectionNotifier extends Notifier<FoodDetectionState> {
         return;
       }
 
-      final result = _service.analyzeFrame(frameBytes);
+      // Jalankan analisis di isolate terpisah agar UI tidak freeze
+      final result = await compute(
+        (bytes) => FoodDetectionService().analyzeFrame(bytes),
+        frameBytes,
+      );
 
       state = state.copyWith(
         lastResult: result,
         isAnalyzing: false,
-        statusMessage: 'Otomatis (setiap 10s)',
+        statusMessage: 'Otomatis (setiap 6 jam)',
       );
     } catch (e) {
       state = state.copyWith(
