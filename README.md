@@ -1,79 +1,56 @@
-# 🐟 AquaFeed — Sistem Pemberi Pakan Ikan Otomatis Berbasis IoT
+# 🐟 AquaFeed — Sistem Pemberi Pakan Ikan Otomatis Berbasis IoT & AI
 
-**AquaFeed** adalah aplikasi **Flutter** (mobile) yang dikembangkan sebagai proyek **Tugas Akhir** untuk memonitor dan mengontrol alat pemberi pakan ikan otomatis berbasis **Internet of Things (IoT)** secara *real-time*.
+**AquaFeed** adalah aplikasi **Flutter** (mobile) yang dikembangkan sebagai proyek **Tugas Akhir** untuk memonitor, menjadwalkan, dan mengontrol alat pemberi pakan ikan otomatis berbasis **Internet of Things (IoT)** secara *real-time*. Proyek ini dilengkapi dengan teknologi **Kecerdasan Buatan (AI)** di sisi klien untuk mendeteksi sisa pakan.
 
 ---
 
 ## 📱 Fitur Utama
 
-### 1. 🎥 Live Camera Monitoring
+### 1. 🎥 Live Camera Monitoring & AI Food Detection
 - Menampilkan visualisasi area kolam secara *live streaming* melalui kamera ESP32-CAM.
-- Fitur **Snapshot** untuk mengambil gambar area kolam.
-- Fitur **Pause/Play** untuk mengontrol *stream* kamera.
-- Dukungan penggantian URL *stream* secara dinamis.
+- **Kecerdasan Buatan (AI) Client-Side**: Aplikasi memproses video stream menggunakan metode *Computer Vision* (Color-Pigment Thresholding & Coverage Area Analysis) untuk mendeteksi apakah sisa pakan di kolam telah habis, sisa sedikit, atau menumpuk.
+- AI dijalankan menggunakan sistem **Isolate (Multithreading)** pada *smartphone* agar UI aplikasi tetap mulus dan ESP32 terhindar dari *overheat*.
 
-### 2. 📊 Monitoring Status Perangkat
-- Menampilkan **Stok Pakan** (sisa pakan dalam gram) dengan **Progress Bar** visual.
-- Menampilkan **Status Alat** (Standby/Offline/Error).
-- Menampilkan status **Katup** (Tertutup/Terbuka).
-- Menampilkan status **Servo** (Ready/Bergerak).
-- Indikator **koneksi Firebase** secara *real-time*.
+### 2. 🎛️ Kontrol Pakan Cerdas & Penjadwalan (*Smart Feeding & Scheduling*)
+- Pemberian pakan dapat dilakukan secara **Manual** (Beri Pakan Sekarang) langsung dari aplikasi.
+- Sistem **Penjadwalan Waktu (Scheduler)** otomatis yang tersinkronisasi via Internet Time (NTP) dan Firebase. 
+- Durasi putaran motor dikunci secara presisi menggunakan *hardware timer* untuk memastikan konsistensi keluaran pakan.
 
-### 3. 🎛️ Kontrol Pakan Cerdas (*Smart Feeding Control*)
-- Input **dosis pakan** dalam satuan gram (gram).
-- Tombol **+/-** untuk menambah/mengurangi dosis.
-- Tombol **"Beri Makan"** untuk mengeksekusi pemberian pakan langsung ke perangkat IoT.
-- Notifikasi *snackbar* setelah pakan diberikan.
+### 3. 📊 Monitoring Status Perangkat
+- Menampilkan **Status Alat** (Online/Offline/Error).
+- Menampilkan notifikasi visual secara *real-time* mengenai aktivitas kamera dan status deteksi sisa pakan.
+- Indikator **koneksi Firebase** dan *Ping* secara *real-time*.
 
 ### 4. 📋 Log Aktivitas (*Activity Log*)
-- Mencatat riwayat pemberian pakan secara otomatis.
-- Setiap log menampilkan **judul aktivitas**, **waktu**, dan **status** (sukses/peringatan).
+- Mencatat riwayat pemberian pakan secara otomatis, baik yang dilakukan secara manual maupun jadwal otomatis.
+- Setiap log menampilkan **judul aktivitas**, **waktu**, dan **status** keberhasilan.
 
 ---
 
 ## 🏗️ Arsitektur & Teknologi
 
-| Komponen | Teknologi |
-|----------|-----------|
-| **Framework** | Flutter (Dart) — *Single Codebase* untuk Android & iOS |
-| **State Management** | Riverpod 2.6.x — Aman tipe (*type-safe*), performa tinggi, *reactive* |
-| **Backend/Database** | Firebase Realtime Database — Sinkronisasi data *real-time* |
-| **Theme** | Dark Mode (Midnight Blue & Cyan) — Desain *High-Tech* |
-| **Streaming Kamera** | MJPEG via ESP32-CAM |
-| **Font** | Google Fonts (Inter) |
+Sistem ini menerapkan konsep **Distributed Architecture (Arsitektur Terdistribusi)** di mana beban komputasi dibagi antara perangkat *Edge* dan *Client*:
 
-## 📂 Struktur Folder
+| Komponen | Teknologi | Keterangan |
+|----------|-----------|------------|
+| **Client / Mobile App** | Flutter (Dart) & Riverpod | Menjalankan *State Management* dan komputasi berat algoritma **AI Image Processing**. |
+| **Backend / Broker** | Firebase Realtime Database (RTDB) | Jembatan komunikasi *real-time* untuk perintah, status, dan *Auto-IP Discovery*. |
+| **Edge / Microcontroller** | ESP32-CAM (AI-Thinker) | Berfungsi murni sebagai pengirim *video stream* dan penggerak *actuator*. |
+| **Sistem Operasi Edge** | FreeRTOS (Dual-Core) | **Core 0** menangani *Video Streaming*. **Core 1** (*feederTask*) menangani Firebase & Motor. |
+| **Actuator Driver** | L298N Mini (H-Bridge) | Mengendalikan Motor DC dengan aman, mencegah *brownout* / restart akibat *Noise Kelistrikan (EMI)*. |
 
-```
-lib/
-├── main.dart                      # Entry point aplikasi
-├── home_screen.dart               # Halaman utama (dashboard)
-├── theme.dart                     # Tema dark mode (warna, tipografi)
-├── providers/
-│   ├── device_provider.dart       # Status perangkat (Firebase)
-│   ├── feed_provider.dart         # Stok & dosis pakan (Firebase)
-│   └── log_provider.dart          # Log aktivitas (Firebase)
-└── widgets/
-    ├── custom_header.dart         # Header dengan indikator koneksi
-    ├── live_camera_card.dart      # Live streaming kamera ESP32
-    ├── status_cards.dart          # Kartu stok pakan & status alat
-    ├── feeding_control.dart       # Panel kontrol dosis pakan
-    └── activity_log.dart          # Riwayat log aktivitas
-```
+## ⚙️ Cara Kerja Sistem (Alur Singkat)
 
-## ⚙️ Cara Kerja
+1. **Aplikasi Flutter** dan **ESP32-CAM** terhubung ke **Firebase Realtime Database**.
+2. Kamera ESP32-CAM (Core 0) secara konstan mengirimkan *stream* video MJPEG ke IP lokal jaringan.
+3. Aplikasi menangkap *stream* tersebut, dan pengguna dapat mengaktifkan fitur **AI Deteksi Sisa Pakan** yang akan membedah warna piksel RGB dari video tersebut di HP pengguna.
+4. Saat waktu **Jadwal** tiba atau tombol **Beri Makan** ditekan, ESP32 (Core 1) membaca perintah tersebut dari Firebase.
+5. ESP32 mengaktifkan modul **L298N** untuk memutar Motor DC maju selama sekian detik.
+6. Catatan riwayat pakan otomatis dikirim kembali ke Firebase dan masuk ke menu **Log Aktivitas** di aplikasi.
 
-1. **Aplikasi** (Flutter) terhubung ke **Firebase Realtime Database**.
-2. **Perangkat IoT** (ESP32) juga terhubung ke Firebase yang sama.
-3. Saat pengguna menekan **"Beri Makan"**:
-   - Aplikasi mengirim perintah `dispense` + dosis ke Firebase.
-   - ESP32 mendeteksi perubahan tersebut dan menggerakkan **servo/katup**.
-   - **Load Cell** membaca berat pakan yang jatuh.
-   - Setelah dosis tercapai, servo menutup katup secara otomatis.
-   - Data **stok terbaru** dikirim kembali ke Firebase → aplikasi diperbarui secara *real-time*.
-4. **Kamera** ESP32-CAM mengirimkan *stream* video MJPEG langsung ke aplikasi.
+---
 
-## 🚀 Cara Menjalankan
+## 🚀 Cara Menjalankan Project (Developer)
 
 ```bash
 # Clone repositori
@@ -82,43 +59,24 @@ git clone https://github.com/iam324/aquafee-tugas-akhir.git
 # Masuk ke folder project
 cd aquafeed
 
-# Install dependencies
+# Install dependencies Flutter
 flutter pub get
 
-# Jalankan aplikasi
-flutter run
+# Jalankan aplikasi (Disarankan menggunakan perangkat fisik Android/iOS untuk performa AI)
+flutter run --release
 ```
 
-> **Catatan**: Pastikan sudah mengatur file `google-services.json` dari Firebase Console untuk koneksi database.
+> **Catatan**: Pastikan Anda sudah mengatur file `google-services.json` (Android) / `GoogleService-Info.plist` (iOS) dari Firebase Console Anda sendiri.
 
-## 📚 Dokumentasi Lainnya
+## 📚 Dokumentasi Analisis Lengkap
 
-- **[IDE_PENGEMBANGAN.md](./IDE_PENGEMBANGAN.md)** — Kumpulan ide pengembangan fitur untuk project (Dashboard Grafik, Penjadwalan, Notifikasi, dll).
-- **[PENJELASAN_PROYEK.md](./PENJELASAN_PROYEK.md)** — Penjelasan detail arsitektur, fitur, dan analisis pemecahan masalah.
-- **[TAHAP_SELANJUTNYA.md](./TAHAP_SELANJUTNYA.md)** — Panduan integrasi hardware ESP32, Firebase, dan skema elektronika.
+Untuk melihat dokumentasi teknis mendalam mengenai arsitektur, metode algoritma AI, dan keputusan teknik kelistrikan, silakan baca:
+- **[PENJELASAN_PROYEK.md](./PENJELASAN_PROYEK.md)** — Wajib dibaca untuk memahami arsitektur AI, FreeRTOS, dan pemecahan masalah *hardware*.
+- **[panduan_pemasangan_L9110S.md](./panduan_pemasangan_L9110S.md)** — Skema kelistrikan motor driver H-Bridge ke ESP32.
 
 ---
 
 ## 👨‍💻 Developer
 
-Dikembangkan untuk **Tugas Akhir** — Program Studi [Sistem Informasi/Teknik Informatika]
-
----
+Dikembangkan untuk **Tugas Akhir**
 *"Smart Feeding, Smarter Aquaculture"* 🐟
-
-# aquafeed
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
