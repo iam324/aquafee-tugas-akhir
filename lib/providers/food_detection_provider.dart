@@ -14,7 +14,7 @@ class FoodDetectionState {
     required this.lastResult,
     this.isAnalyzing = false,
     this.errorMessage,
-    this.statusMessage = 'Mendeteksi otomatis (setiap 6 jam)',
+    this.statusMessage = 'Otomatis dalam 60s',
   });
 
   FoodDetectionState copyWith({
@@ -48,18 +48,33 @@ class FoodDetectionNotifier extends Notifier<FoodDetectionState> {
     );
   }
 
-  /// Mulai scan otomatis setiap 6 jam
+  int _countdown = 60;
+
+  /// Mulai hitung mundur scan otomatis
   void _startAutoScan() {
     _autoScanTimer?.cancel();
+    _countdown = 60;
 
     // Jalankan scan pertama setelah 2 detik (saat UI siap)
     Future.delayed(const Duration(seconds: 2), () {
       detectNow();
-    });
+      
+      // Mulai timer mundur 1 detik
+      _autoScanTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (state.isAnalyzing) return; // Pause saat sedang memindai
 
-    // Kemudian ulang otomatis setiap 6 jam
-    _autoScanTimer = Timer.periodic(const Duration(hours: 6), (_) {
-      detectNow();
+        _countdown--;
+
+        if (_countdown <= 0) {
+          detectNow();
+          _countdown = 60; // Reset kembali ke 60
+        } else {
+          // Update tulisan di layar setiap detik
+          state = state.copyWith(
+            statusMessage: 'Otomatis dalam ${_countdown}s',
+          );
+        }
+      });
     });
   }
 
@@ -99,7 +114,7 @@ class FoodDetectionNotifier extends Notifier<FoodDetectionState> {
       state = state.copyWith(
         lastResult: result,
         isAnalyzing: false,
-        statusMessage: 'Otomatis (setiap 6 jam)',
+        statusMessage: 'Otomatis dalam ${_countdown}s',
       );
     } catch (e) {
       state = state.copyWith(

@@ -39,10 +39,9 @@ class FoodDetectionPanel extends ConsumerWidget {
         statusText = detectionState.lastResult.statusLabel;
         break;
       case FoodResidualStatus.unknown:
-      default:
         icon = Icons.help_outline_rounded;
         color = AppTheme.colors.secondaryText;
-        statusText = detectionState.statusMessage;
+        statusText = 'Belum Dipindai';
     }
 
     // Jika sedang analyzing, ganti icon dan warna
@@ -101,7 +100,14 @@ class FoodDetectionPanel extends ConsumerWidget {
                           : AppTheme.colors.primaryText,
                     ),
                   ),
-                  // Hapus info butir pelet — hanya tampilkan status sederhana
+                  const SizedBox(height: 2),
+                  // Teks hitung mundur (countdown)
+                  Text(
+                    detectionState.statusMessage,
+                    style: AppTheme.colors.bodySmall.copyWith(
+                      color: AppTheme.colors.accent,
+                    ),
+                  ),
                 ],
               ),
             ),
