@@ -88,7 +88,8 @@ class FoodDetectionPanel extends ConsumerWidget {
                   Text(
                     'Deteksi Sisa Pakan',
                     style: AppTheme.colors.labelMedium.copyWith(
-                      color: AppTheme.colors.secondaryText,
+                      color: AppTheme.colors.accent,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),

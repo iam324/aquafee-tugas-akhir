@@ -35,7 +35,7 @@ class FeedingControlPanel extends ConsumerWidget {
               const SizedBox(width: 10),
               Text(
                 'KONTROL PAKAN',
-                style: AppTheme.colors.titleSmall,
+                style: AppTheme.colors.titleSmall.copyWith(color: AppTheme.colors.accent, fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               if (isDemoMode)

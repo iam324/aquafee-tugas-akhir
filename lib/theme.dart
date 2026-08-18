@@ -102,7 +102,7 @@ class TealDarkTheme extends AppThemeColors {
   const TealDarkTheme() : super(
     name: 'Cyber Neon',
     isDark: true,
-    accent: const Color(0xFF00FFCC), // Hyper Neon Mint
+    accent: const Color(0xFF00BFA5), // Neon Teal (Better contrast for white text)
     background: const Color(0xFF05070A), // Abyss Black
     surface: const Color(0xFF0D1219), // Midnight Blue-Grey
     surfaceLight: const Color(0xFF161E29), // Lighter floating element

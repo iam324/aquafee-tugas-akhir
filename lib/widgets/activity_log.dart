@@ -31,7 +31,7 @@ class ActivityLogSection extends ConsumerWidget {
                   const SizedBox(width: 10),
                   Text(
                     'AKTIVITAS HARI INI',
-                    style: AppTheme.colors.titleSmall,
+                    style: AppTheme.colors.titleSmall.copyWith(color: AppTheme.colors.accent, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -227,7 +227,10 @@ class _InfoPlaceholder extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.colors.surface,
         borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
-        border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
+        border: Border.all(
+          color: AppTheme.colors.accent.withAlpha((255 * 0.3).round()),
+          width: 1.5,
+        ),
       ),
       child: Column(
         children: [

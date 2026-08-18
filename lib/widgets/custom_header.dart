@@ -45,11 +45,6 @@ class CustomHeader extends ConsumerWidget {
           Row(
             children: [
               _HeaderActionBtn(
-                icon: Icons.notifications_outlined,
-                onTap: () {},
-              ),
-              const SizedBox(width: 10),
-              _HeaderActionBtn(
                 icon: Icons.settings_outlined,
                 onTap: () {
                   Navigator.of(context).push(

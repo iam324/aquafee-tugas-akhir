@@ -43,11 +43,15 @@ class GlassCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppTheme.colors.surface,
               borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
+            ),
+            foregroundDecoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
               border: Border.all(
-                color: Colors.white.withAlpha((255 * 0.1).round()),
+                color: AppTheme.colors.accent.withAlpha((255 * 0.3).round()),
                 width: 1.5,
               ),
             ),
+            clipBehavior: Clip.antiAlias,
             child: child,
           ),
         ),

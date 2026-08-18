@@ -153,6 +153,10 @@ class AddScheduleButton extends ConsumerWidget {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
           backgroundColor: AppTheme.colors.background,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
+            side: BorderSide(color: AppTheme.colors.accent.withAlpha((255 * 0.4).round()), width: 1.5),
+          ),
           title: Text(
             'Tambah Jadwal Pakan',
             style: AppTheme.colors.titleMedium.copyWith(color: AppTheme.colors.primaryText),
@@ -297,8 +301,8 @@ class AddScheduleButton extends ConsumerWidget {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.colors.statusOnline,
-                foregroundColor: Colors.black,
+                backgroundColor: AppTheme.colors.accent,
+                foregroundColor: Colors.white,
               ),
               child: const Text('Simpan Jadwal'),
             ),
@@ -323,7 +327,10 @@ class ScheduleView extends ConsumerWidget {
       decoration: BoxDecoration(
         color: AppTheme.colors.surface,
         borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
-        border: Border.all(color: Colors.white.withAlpha((255 * 0.05).round())),
+        border: Border.all(
+          color: AppTheme.colors.accent.withAlpha((255 * 0.3).round()),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -472,6 +479,10 @@ class ScheduleView extends ConsumerWidget {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
           backgroundColor: AppTheme.colors.background,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
+            side: BorderSide(color: AppTheme.colors.accent.withAlpha((255 * 0.4).round()), width: 1.5),
+          ),
           title: Text(
             'Edit Jadwal Pakan',
             style: AppTheme.colors.titleMedium.copyWith(color: AppTheme.colors.primaryText),

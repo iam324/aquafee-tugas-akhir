@@ -37,10 +37,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _buildSectionHeader('APPEARANCE'),
           const SizedBox(height: 12),
           _buildThemeSelector(activeTheme),
-          const SizedBox(height: 32),
-          _buildSectionHeader('SYSTEM INFO'),
-          const SizedBox(height: 12),
-          _buildAppInfoCard(),
         ],
       ),
     );
@@ -128,48 +124,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             );
           }),
           const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAppInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.colors.surface,
-        borderRadius: BorderRadius.circular(AppTheme.colors.radiusCard),
-        border: Border.all(color: AppTheme.colors.isDark ? Colors.white.withAlpha((255 * 0.05).round()) : Colors.black.withAlpha((255 * 0.05).round())),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.colors.accent.withAlpha((255 * 0.15).round()),
-                  borderRadius: BorderRadius.circular(AppTheme.colors.radiusButton),
-                ),
-                child: Icon(Icons.water_drop_rounded, color: AppTheme.colors.accent, size: 28),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('AquaFeed Pro', style: AppTheme.colors.titleLarge),
-                  const SizedBox(height: 4),
-                  Text('Version 1.0.0 (Stable)', style: AppTheme.colors.bodySmall),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Industrial-grade IoT monitoring and automatic feeding system designed for smart aquaculture management.',
-            style: AppTheme.colors.bodyMedium,
-          ),
         ],
       ),
     );
