@@ -1,0 +1,8 @@
+- [x] Remove "gram" and "g" from `schedule_card.dart` and hide next schedule if null.
+- [x] Remove "gram" from `feeding_control.dart`, adjust dosing buttons layout, and remove "g" from manual feeding log.
+- [x] Modify `activity_log.dart` to remove "g" from log titles format.
+- [x] Delete `turbidity_card.dart` and remove it from `home_screen.dart`.
+- [x] Make the Mjpeg mini player in `home_screen.dart` draggable using `GestureDetector`.
+- [x] Modify `feeder_esp32.ino` to push an activity log when executing an automatic schedule.
+- [x] Update `home_screen.dart` to listen to `logProvider` for new logs and show a toast notification.
+- [x] Sync `feeder_esp32.ino` (the loose file) with the firmware folder one.

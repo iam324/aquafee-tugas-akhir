@@ -1,0 +1,63 @@
+flowchart TD
+    %% Node Definitions
+    subgraph MobileApp[Aplikasi Mobile (Flutter)]
+        direction TB
+        UI[UI Flutter/Riverpod]
+        AI[AI Image Processing<br>(Isolate)]
+        LiveCountdown[Live Countdown UI<br>(1 menit sekali)]
+        ManualButton[Tombol Manual Deteksi]
+    end
+
+    subgraph Firebase[Firebase Realtime Database]
+        direction TB
+        Commands[Perintah<br>(Start/Stop Deteksi)]
+        Scheduling[Array Jadwal<br>(dari Flutter)]
+        DeviceStatus[Status Perangkat<br>(Online/Offline)]
+        AutoIPDiscovery[Auto-IP Discovery]
+    end
+
+    subgraph ESP32CAM[ESP32-CAM (Edge Device)]
+        direction TB
+        Core0[Core 0<br>HTTP Server<br>MJPEG Stream]
+        Core1[Core 1<br>FreeRTOS Loop<br>Firebase Sync<br>Penjadwalan<br>Kontrol Motor L298N]
+        MotorCtrl[Kontrol Motor DC 5V<br>melalui L298N]
+        Capacitor[Kapasitor Elco 470uF<br>(Noise Dampening)]
+    end
+
+    subgraph Hardware[Aktuator & Sensor]
+        Motor[Motor DC 5V]
+        NTP[Server NTP<br>(pool.ntp.org)]
+    end
+
+    %% Connections
+    %% App <-> Firebase
+    UI -->|Mengirim/terima perintah<br>& jadwal| Commands
+    UI -->|Mengunduh jadwal<br/>saat ESP32 menyala| Scheduling
+    DeviceStatus -->|Status perangkat<br/>(online/offline)| UI
+    AutoIPDiscovery -->|Menemukan IP ESP32| UI
+
+    %% App <-> ESP32-CAM (Video Stream)
+    UI -->|Mengambil snapshot<br/>dari live stream<br/>(MJPEG)| Core0
+    Core0 -->|Mengirimkan stream<br/>video MJPEG| UI
+
+    %% Firebase <-> ESP32-CAM
+    Commands -->|Menerima perintah<br/>(start/stop)| Core1
+    Scheduling -->|Mengunduh array jadwal<br/>dan mengeksekusi| Core1
+    Core1 -->|Mengirim status<br/>perangkat ke Firebase| DeviceStatus
+    NTP -->|Mengambil jam atom<br/>(WIB GMT+7)| Core1
+
+    %% ESP32-CAM <-> Hardware
+    Core1 -->|Mengendalikan motor<br/>lewat GPIO 15/14| MotorCtrl
+    MotorCtrl -->|Menggerakkan motor DC| Motor
+    Capacitor -->|Mereduksi noise<br/>dari motor| MotorCtrl
+
+    %% Styling
+    classDef mobile fill:#E3F2FD,stroke:#1565C0,stroke-width:2px;
+    classDef firebase fill:#FFF8E1,stroke:#F57C00,stroke-width:2px;
+    classDef esp fill:#F3E5F5,stroke:#6A1B9A,stroke-width:2px;
+    classDef hardware fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px;
+
+    class MobileApp mobile
+    class Firebase firebase
+    class ESP32CAM esp
+    class Hardware hardware
